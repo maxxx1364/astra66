@@ -1,0 +1,21 @@
+# tbae — Trading Backtest & Analytics Engine
+#
+# The engine itself (engine/) is pure standard-library Python: no numpy, no pandas.
+# Every number in a report can therefore be reproduced from the source without
+# version-skew in a numerical stack.  The dependencies below are only for the
+# service layer, the tests and the optional live feed.
+
+# --- API / dashboard (required to run `uvicorn app.main:app`) ------------------
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.27,<1.0
+
+# --- tests --------------------------------------------------------------------
+pytest>=8.0,<9.0
+httpx>=0.27,<1.0          # FastAPI's TestClient transport
+
+# --- optional: live Binance websocket feed ------------------------------------
+# engine/feeds.py imports this lazily; everything else works without it.
+# websockets>=12.0
+
+# --- optional: development ----------------------------------------------------
+# ruff>=0.4               # lint (the repo has no formatter config yet)

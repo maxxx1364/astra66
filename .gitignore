@@ -1,0 +1,63 @@
+# ---------------------------------------------------------------------------
+# Python (the engine, the API and the tests live in tbae/)
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ---------------------------------------------------------------------------
+# Research artefacts — generated, never hand-edited, and too large for git.
+# Reproduce with:  python3 scripts/cost_attribution.py --seeds 20 --days 45 --tf 15
+# ---------------------------------------------------------------------------
+reports/
+*.csv
+!tbae/tests/**/*.csv
+
+# ---------------------------------------------------------------------------
+# Local user state written by the dashboard (rules, keymap, uploaded CSVs).
+# tbae/data/user_rules.json is per-user config, not shared project config.
+# ---------------------------------------------------------------------------
+tbae/data/
+
+# ---------------------------------------------------------------------------
+# Node / Next.js (the repository template that shipped before the Python engine)
+# ---------------------------------------------------------------------------
+node_modules/
+.next/
+out/
+.turbo/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---------------------------------------------------------------------------
+# Editors / OS
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Secrets — never commit exchange credentials
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
