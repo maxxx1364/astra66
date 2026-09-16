@@ -8,6 +8,9 @@
 # --- API / dashboard (required to run `uvicorn app.main:app`) ------------------
 fastapi>=0.110,<1.0
 uvicorn[standard]>=0.27,<1.0
+python-multipart>=0.0.9   # POST /api/upload takes an UploadFile; FastAPI refuses
+                          # to import the app without it ("Form data requires
+                          # python-multipart"), so it is a hard requirement.
 
 # --- tests --------------------------------------------------------------------
 pytest>=8.0,<9.0
