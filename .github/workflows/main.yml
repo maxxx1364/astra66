@@ -1,1 +1,286 @@
+name: backtest
 
+# Runs the test suite, then reproduces the research on BOTH data sources:
+#   - synthetic (always, no network) so a regression can never hide behind an
+#     exchange outage;
+#   - real Binance klines, downloaded inside the runner.  Runners have internet
+#     access that the development sandbox does not, which is the whole reason
+#     this workflow exists: it is the only place the real-data study can run
+#     unattended.
+#
+# The real-data job is `continue-on-error`: Binance geo-blocks some IP ranges
+# (HTTP 451) and that is a third-party policy, not a defect in this repository.
+# A blocked run still publishes a summary saying so, instead of turning main red.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"        # Mondays 03:17 UTC — fresh week of data
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: "Comma-separated symbols"
+        default: "BTCUSDT"
+      days:
+        description: "Days of 1m history to download"
+        default: "90"
+      tf:
+        description: "Timeframe (minutes)"
+        default: "15"
+      window:
+        description: "Research window length (days)"
+        default: "45"
+      run_real_data:
+        description: "Download real data (slower)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: backtest-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # pull_request events keep the download small: a PR check should prove the
+  # pipeline works on real data, not re-run the whole study on every push.
+  SYMBOLS: ${{ github.event.inputs.symbols || 'BTCUSDT' }}
+  DAYS: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.days || '90') }}
+  TF: ${{ github.event.inputs.tf || '15' }}
+  WINDOW: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.window || '45') }}
+  SEEDS_SYNTH: ${{ github.event_name == 'pull_request' && '4' || '20' }}
+
+jobs:
+  # ---------------------------------------------------------------- tests ---
+  tests:
+    name: tests (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: tbae/requirements.txt
+
+      # Installing exactly what requirements.txt declares is the point: it is how
+      # the missing `python-multipart` dependency was caught.
+      - name: Install declared dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        working-directory: tbae
+
+      - name: Pytest
+        run: python -m pytest -q --no-header -p no:warnings
+        working-directory: tbae
+
+      - name: API imports cleanly
+        run: python -c "import app.main; print('routes:', len(app.main.app.routes))"
+        working-directory: tbae
+
+  # --------------------------------------------------- synthetic research ---
+  # No network.  This is the regression guard for the research code path itself.
+  research-synthetic:
+    name: research (synthetic)
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tbae/requirements.txt
+
+      - name: Install
+        run: pip install -r requirements.txt
+        working-directory: tbae
+
+      - name: Entry A/B against controls
+        run: |
+          python -m app.cli compare --tf "$TF" --days "$WINDOW" --seed 7 \
+            --json ../reports/synthetic_compare.json
+        working-directory: tbae
+
+      - name: Cost attribution
+        run: |
+          python scripts/cost_attribution.py \
+            --seeds "$SEEDS_SYNTH" --days "$WINDOW" --tf "$TF" \
+            --n-boot 1000 --json ../reports/synthetic_cost_attribution.json
+        working-directory: tbae
+
+      - name: Summary
+        run: |
+          {
+            echo "## Synthetic research"
+            echo
+            echo "| study | file |"
+            echo "|---|---|"
+            for f in ../reports/synthetic_*.json; do
+              echo "| $(basename "$f") | artifact |"
+            done
+            echo
+            echo "Seeds: \`$SEEDS_SYNTH\` · window: \`$WINDOW\`d · tf: \`$TF\`m"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-reports
+          path: reports/
+          if-no-files-found: error
+
+  # ------------------------------------------------------- real research ---
+  research-real:
+    name: research (real Binance data)
+    needs: tests
+    # Runs on push, PR and schedule.  On workflow_dispatch it is skipped only if
+    # the caller unticks the box — `github.event.inputs` is null for the other
+    # event types, and `null != 'false'` keeps those runs enabled.
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.run_real_data != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tbae/requirements.txt
+
+      - name: Install
+        run: pip install -r requirements.txt
+        working-directory: tbae
+
+      - name: Probe exchange reachability
+        id: probe
+        run: |
+          python - <<'PY' | tee ../reports/reachability.txt
+          import time, urllib.request
+          hosts = {
+              "vision_archive": "https://data.binance.vision/?prefix=data/spot/monthly/klines/BTCUSDT/1m/&delimiter=/",
+              "rest": "https://api.binance.com/api/v3/ping",
+              "rest_mirror": "https://data-api.binance.vision/api/v3/ping",
+          }
+          ok = {}
+          for name, url in hosts.items():
+              t0 = time.time()
+              try:
+                  req = urllib.request.Request(url, headers={"User-Agent": "tbae-ci/1.0"})
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      r.read(200)
+                  ok[name] = True
+                  print(f"OK   {name} ({time.time()-t0:.2f}s)")
+              except Exception as e:
+                  ok[name] = False
+                  print(f"FAIL {name}: {type(e).__name__}: {str(e)[:120]}")
+          with open("../reports/reachability.json", "w") as fh:
+              import json; json.dump(ok, fh)
+          PY
+        working-directory: tbae
+
+      # Archives are keyed by month so a weekly run only re-downloads the newest
+      # month instead of the whole span every time.
+      - name: Cache key stamp
+        id: stamp
+        run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: tbae/data/binance
+          key: binance-${{ env.SYMBOLS }}-${{ env.DAYS }}d-${{ steps.stamp.outputs.month }}
+          restore-keys: |
+            binance-${{ env.SYMBOLS }}-
+            binance-
+
+      # `--source auto` picks the vision archive for spans over 21 days and REST
+      # paging below that.  Forcing vision on a short span would 404 on the
+      # current month (monthly archives are published after month end) and
+      # silently hand back data that stops weeks ago.  The fallback re-tries over
+      # the REST mirror, which is what a geo-blocked runner (HTTP 451) needs.
+      - name: Download klines
+        run: |
+          mkdir -p data/binance ../reports
+          status=0
+          for SYM in $(echo "$SYMBOLS" | tr ',' ' '); do
+            echo "=== $SYM ==="
+            python scripts/fetch_binance.py \
+              --symbols "$SYM" --interval 1m --days "$DAYS" \
+              --source auto --granularity monthly \
+              --out "data/binance/${SYM}_1m.csv" \
+              --json "../reports/download_${SYM}.json" || \
+            python scripts/fetch_binance.py \
+              --symbols "$SYM" --interval 1m --days "$DAYS" \
+              --source rest --mirror \
+              --out "data/binance/${SYM}_1m.csv" \
+              --json "../reports/download_${SYM}.json" || status=1
+          done
+          echo "download_status=$status" >> "$GITHUB_ENV"
+          exit $status
+        working-directory: tbae
+
+      - name: Research on real data
+        run: |
+          status=0
+          for SYM in $(echo "$SYMBOLS" | tr ',' ' '); do
+            CSV="data/binance/${SYM}_1m.csv"
+            [ -s "$CSV" ] || { echo "skip $SYM (no file)"; continue; }
+            echo "=== $SYM ==="
+            python scripts/real_data_research.py \
+              --feed "csv:$CSV" --tf "$TF" --window "$WINDOW" --stride "$WINDOW" \
+              --n-boot 2000 \
+              --json "../reports/real_${SYM}.json" \
+              --markdown "../reports/real_${SYM}.md" || status=1
+            python -m app.cli compare --feed "csv:$CSV" --tf "$TF" \
+              --json "../reports/compare_${SYM}.json" || status=1
+          done
+          exit $status
+        working-directory: tbae
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Real-data research"
+            echo
+            echo "Symbols: \`$SYMBOLS\` · days: \`$DAYS\` · tf: \`$TF\`m · window: \`$WINDOW\`d"
+            echo
+            echo "### Exchange reachability from this runner"
+            echo '```'
+            cat reports/reachability.txt 2>/dev/null || echo "(probe did not run)"
+            echo '```'
+            for f in reports/real_*.md; do
+              [ -s "$f" ] || continue
+              echo
+              cat "$f"
+            done
+            if ! ls reports/real_*.md >/dev/null 2>&1; then
+              echo
+              echo "> **No real-data report was produced.** Either the exchange"
+              echo "> geo-blocked this runner (HTTP 451) or the download failed."
+              echo "> The synthetic study still ran, so the pipeline itself is verified."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-data-reports
+          path: |
+            reports/
+          if-no-files-found: warn
+          retention-days: 90
