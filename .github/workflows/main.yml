@@ -1,16 +1,23 @@
-name: backtest
 
-# Runs the test suite, then reproduces the research on BOTH data sources:
-#   - synthetic (always, no network) so a regression can never hide behind an
-#     exchange outage;
-#   - real Binance klines, downloaded inside the runner.  Runners have internet
-#     access that the development sandbox does not, which is the whole reason
-#     this workflow exists: it is the only place the real-data study can run
-#     unattended.
+
+# Three jobs, in order of how much they need the outside world:
 #
-# The real-data job is `continue-on-error`: Binance geo-blocks some IP ranges
-# (HTTP 451) and that is a third-party policy, not a defect in this repository.
-# A blocked run still publishes a summary saying so, instead of turning main red.
+#   tests              no network.  Installs exactly what requirements.txt
+#                      declares and runs the suite — this is what caught the
+#                      missing python-multipart dependency.
+#   research-synthetic no network.  Reproduces the cost-attribution study from
+#                      the deterministic generator, so a regression in the
+#                      research code can never hide behind an exchange outage.
+#   research-real      downloads Binance klines INSIDE the runner (runners have
+#                      the internet route this sandbox does not) and runs the
+#                      strategy against them.
+#
+# The real-data job is self-contained on purpose: it uses only modules that
+# already exist on main (engine.feeds + app.cli), so it cannot fail because a
+# script was not committed.  Every step that depends on a third party is
+# `continue-on-error`, and the last step always writes an unambiguous ✅/❌ to
+# the job summary — a green tick on the run page must never be mistaken for
+# "real data was analysed".
 
 on:
   push:
@@ -18,7 +25,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "17 3 * * 1"        # Mondays 03:17 UTC — fresh week of data
+    - cron: "17 3 * * 1"        # Mondays 03:17 UTC
   workflow_dispatch:
     inputs:
       symbols:
@@ -31,7 +38,7 @@ on:
         description: "Timeframe (minutes)"
         default: "15"
       window:
-        description: "Research window length (days)"
+        description: "Synthetic study window (days)"
         default: "45"
       run_real_data:
         description: "Download real data (slower)"
@@ -46,9 +53,9 @@ permissions:
   contents: read
 
 env:
-  # pull_request events keep the download small: a PR check should prove the
-  # pipeline works on real data, not re-run the whole study on every push.
   SYMBOLS: ${{ github.event.inputs.symbols || 'BTCUSDT' }}
+  # PR events keep the download small: a PR check proves the path works on real
+  # data, it does not need to re-run the whole study.
   DAYS: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.days || '90') }}
   TF: ${{ github.event.inputs.tf || '15' }}
   WINDOW: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.window || '45') }}
@@ -73,8 +80,6 @@ jobs:
           cache: pip
           cache-dependency-path: tbae/requirements.txt
 
-      # Installing exactly what requirements.txt declares is the point: it is how
-      # the missing `python-multipart` dependency was caught.
       - name: Install declared dependencies
         run: |
           python -m pip install --upgrade pip
@@ -90,7 +95,6 @@ jobs:
         working-directory: tbae
 
   # --------------------------------------------------- synthetic research ---
-  # No network.  This is the regression guard for the research code path itself.
   research-synthetic:
     name: research (synthetic)
     needs: tests
@@ -107,6 +111,10 @@ jobs:
 
       - name: Install
         run: pip install -r requirements.txt
+        working-directory: tbae
+
+      - name: Prepare output directories
+        run: mkdir -p ../reports
         working-directory: tbae
 
       - name: Entry A/B against controls
@@ -127,13 +135,13 @@ jobs:
           {
             echo "## Synthetic research"
             echo
+            echo "Seeds: \`$SEEDS_SYNTH\` · window: \`$WINDOW\`d · tf: \`$TF\`m"
+            echo
             echo "| study | file |"
             echo "|---|---|"
             for f in ../reports/synthetic_*.json; do
-              echo "| $(basename "$f") | artifact |"
+              echo "| $(basename "$f") | artifact \`synthetic-reports\` |"
             done
-            echo
-            echo "Seeds: \`$SEEDS_SYNTH\` · window: \`$WINDOW\`d · tf: \`$TF\`m"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
@@ -146,12 +154,9 @@ jobs:
   research-real:
     name: research (real Binance data)
     needs: tests
-    # Runs on push, PR and schedule.  On workflow_dispatch it is skipped only if
-    # the caller unticks the box — `github.event.inputs` is null for the other
-    # event types, and `null != 'false'` keeps those runs enabled.
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.run_real_data != 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -166,17 +171,27 @@ jobs:
         run: pip install -r requirements.txt
         working-directory: tbae
 
+      # The previous version died here in 11s: the probe piped into
+      # `tee ../reports/reachability.txt` before that directory existed, so tee
+      # exited 1 and every later step was skipped — while `continue-on-error`
+      # still showed the whole run as green.  Creating the directories first is
+      # the fix; each writer also creates them again, defensively.
+      - name: Prepare output directories
+        run: mkdir -p ../reports data/binance
+        working-directory: tbae
+
       - name: Probe exchange reachability
-        id: probe
         run: |
-          python - <<'PY' | tee ../reports/reachability.txt
-          import time, urllib.request
+          python - <<'PY'
+          import json, os, time, urllib.request
+
+          os.makedirs("../reports", exist_ok=True)
           hosts = {
-              "vision_archive": "https://data.binance.vision/?prefix=data/spot/monthly/klines/BTCUSDT/1m/&delimiter=/",
               "rest": "https://api.binance.com/api/v3/ping",
               "rest_mirror": "https://data-api.binance.vision/api/v3/ping",
+              "vision_archive": "https://data.binance.vision/?prefix=data/spot/monthly/klines/BTCUSDT/1m/&delimiter=/",
           }
-          ok = {}
+          lines, ok = [], {}
           for name, url in hosts.items():
               t0 = time.time()
               try:
@@ -184,103 +199,262 @@ jobs:
                   with urllib.request.urlopen(req, timeout=20) as r:
                       r.read(200)
                   ok[name] = True
-                  print(f"OK   {name} ({time.time()-t0:.2f}s)")
+                  lines.append(f"OK   {name} ({time.time()-t0:.2f}s)")
               except Exception as e:
                   ok[name] = False
-                  print(f"FAIL {name}: {type(e).__name__}: {str(e)[:120]}")
+                  lines.append(f"FAIL {name}: {type(e).__name__}: {str(e)[:140]}")
+          text = "\n".join(lines)
+          print(text)
+          with open("../reports/reachability.txt", "w") as fh:
+              fh.write(text + "\n")
           with open("../reports/reachability.json", "w") as fh:
-              import json; json.dump(ok, fh)
+              json.dump(ok, fh, indent=2)
           PY
         working-directory: tbae
 
-      # Archives are keyed by month so a weekly run only re-downloads the newest
-      # month instead of the whole span every time.
-      - name: Cache key stamp
-        id: stamp
-        run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/cache@v4
-        with:
-          path: tbae/data/binance
-          key: binance-${{ env.SYMBOLS }}-${{ env.DAYS }}d-${{ steps.stamp.outputs.month }}
-          restore-keys: |
-            binance-${{ env.SYMBOLS }}-
-            binance-
-
-      # `--source auto` picks the vision archive for spans over 21 days and REST
-      # paging below that.  Forcing vision on a short span would 404 on the
-      # current month (monthly archives are published after month end) and
-      # silently hand back data that stops weeks ago.  The fallback re-tries over
-      # the REST mirror, which is what a geo-blocked runner (HTTP 451) needs.
+      # Klines are public market data: no API key.  If BINANCE_API_KEY is set as
+      # a repository secret it is picked up automatically (higher rate limit).
+      # api.binance.com answers HTTP 451 in some jurisdictions, so the mirror is
+      # tried second rather than the run simply failing.
       - name: Download klines
+        id: download
+        continue-on-error: true
         run: |
-          mkdir -p data/binance ../reports
-          status=0
-          for SYM in $(echo "$SYMBOLS" | tr ',' ' '); do
-            echo "=== $SYM ==="
-            python scripts/fetch_binance.py \
-              --symbols "$SYM" --interval 1m --days "$DAYS" \
-              --source auto --granularity monthly \
-              --out "data/binance/${SYM}_1m.csv" \
-              --json "../reports/download_${SYM}.json" || \
-            python scripts/fetch_binance.py \
-              --symbols "$SYM" --interval 1m --days "$DAYS" \
-              --source rest --mirror \
-              --out "data/binance/${SYM}_1m.csv" \
-              --json "../reports/download_${SYM}.json" || status=1
-          done
-          echo "download_status=$status" >> "$GITHUB_ENV"
-          exit $status
+          python - <<'PY'
+          import datetime as dt, json, os, sys, time
+
+          sys.path.insert(0, ".")
+          from engine.feeds import BinanceRestFeed, write_minutes_csv
+
+          DAY = 86_400_000
+          symbols = [s.strip().upper() for s in os.environ.get("SYMBOLS", "BTCUSDT").split(",") if s.strip()]
+          days = int(os.environ.get("DAYS", "90"))
+          end = int(time.time() // 60 * 60 * 1000)
+          start = end - days * DAY
+          bases = ["https://api.binance.com", "https://data-api.binance.vision"]
+
+          def iso(ms):
+              return dt.datetime.fromtimestamp(ms / 1000.0, dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+          os.makedirs("../reports", exist_ok=True)
+          os.makedirs("data/binance", exist_ok=True)
+          qc_all, failed = {}, []
+
+          for sym in symbols:
+              bars, used = None, None
+              for base in bases:
+                  t0 = time.time()
+                  try:
+                      got = BinanceRestFeed(symbol=sym, interval="1m", base_url=base).load(
+                          start_ms=start, end_ms=end)
+                  except Exception as e:
+                      print(f"{sym}: {base} -> {type(e).__name__}: {str(e)[:200]}", flush=True)
+                      continue
+                  if got:
+                      bars, used = got, base
+                      print(f"{sym}: {len(got):,} minutes via {base} in {time.time()-t0:.1f}s", flush=True)
+                      break
+                  print(f"{sym}: {base} -> 0 bars", flush=True)
+              if not bars:
+                  failed.append(sym)
+                  continue
+
+              path = f"data/binance/{sym}_1m.csv"
+              write_minutes_csv(bars, path)
+              ts = [b.ts for b in bars]
+              span = (ts[-1] - ts[0]) // 60_000 + 1
+              qc = {
+                  "symbol": sym, "source": used, "path": path,
+                  "bytes": os.path.getsize(path), "bars": len(bars),
+                  "first": iso(ts[0]), "last": iso(ts[-1]),
+                  "requested_days": days,
+                  "covered_days": round((ts[-1] - ts[0]) / DAY, 2),
+                  "span_minutes": span,
+                  "missing_minutes": span - len(set(ts)),
+              }
+              qc["missing_pct"] = round(100.0 * qc["missing_minutes"] / span, 4) if span else 0.0
+              qc_all[sym] = qc
+              print(f"{sym}: {qc['first']} .. {qc['last']}  missing {qc['missing_minutes']} "
+                    f"minute(s)  {qc['bytes']/1e6:.2f} MB", flush=True)
+
+          with open("../reports/data_qc.json", "w") as fh:
+              json.dump(qc_all, fh, indent=2)
+          if failed:
+              raise SystemExit(f"no data downloaded for: {', '.join(failed)}")
+          PY
         working-directory: tbae
 
+      # Only modules that already exist on main are used here, so this cannot
+      # break because a helper script was not committed.
       - name: Research on real data
+        continue-on-error: true
         run: |
           status=0
           for SYM in $(echo "$SYMBOLS" | tr ',' ' '); do
             CSV="data/binance/${SYM}_1m.csv"
-            [ -s "$CSV" ] || { echo "skip $SYM (no file)"; continue; }
-            echo "=== $SYM ==="
-            python scripts/real_data_research.py \
-              --feed "csv:$CSV" --tf "$TF" --window "$WINDOW" --stride "$WINDOW" \
-              --n-boot 2000 \
-              --json "../reports/real_${SYM}.json" \
-              --markdown "../reports/real_${SYM}.md" || status=1
+            if [ ! -s "$CSV" ]; then echo "skip $SYM (no data file)"; continue; fi
+            echo "=== $SYM: compare vs controls ==="
             python -m app.cli compare --feed "csv:$CSV" --tf "$TF" \
-              --json "../reports/compare_${SYM}.json" || status=1
+              --json "../reports/real_compare_${SYM}.json" || status=1
+            echo "=== $SYM: confirmation-threshold sweep ==="
+            python -m app.cli sweep --feed "csv:$CSV" --tf "$TF" \
+              --param min_edge_score --grid 0.45,0.6,0.75,0.8 \
+              --json "../reports/real_sweep_${SYM}.json" || status=1
+            echo "=== $SYM: filter ablation ==="
+            python -m app.cli ablation --feed "csv:$CSV" --tf "$TF" \
+              --json "../reports/real_ablation_${SYM}.json" || status=1
           done
           exit $status
         working-directory: tbae
 
-      - name: Job summary
+      - name: Job summary (always, and always unambiguous)
         if: always()
         run: |
-          {
-            echo "## Real-data research"
-            echo
-            echo "Symbols: \`$SYMBOLS\` · days: \`$DAYS\` · tf: \`$TF\`m · window: \`$WINDOW\`d"
-            echo
-            echo "### Exchange reachability from this runner"
-            echo '```'
-            cat reports/reachability.txt 2>/dev/null || echo "(probe did not run)"
-            echo '```'
-            for f in reports/real_*.md; do
-              [ -s "$f" ] || continue
-              echo
-              cat "$f"
-            done
-            if ! ls reports/real_*.md >/dev/null 2>&1; then
-              echo
-              echo "> **No real-data report was produced.** Either the exchange"
-              echo "> geo-blocked this runner (HTTP 451) or the download failed."
-              echo "> The synthetic study still ran, so the pipeline itself is verified."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PY'
+          import glob, json, os
+
+          rep = "../reports"
+          summary = os.environ.get("GITHUB_STEP_SUMMARY", "/dev/null")
+
+          def load(path):
+              try:
+                  with open(path) as fh:
+                      return json.load(fh)
+              except Exception:
+                  return None
+
+          def num(x, fmt="{:+.4f}"):
+              try:
+                  v = float(x)
+              except (TypeError, ValueError):
+                  return "—"
+              return "—" if v != v else fmt.format(v)
+
+          L = ["## Real-data research", ""]
+          reach = os.path.join(rep, "reachability.txt")
+          if os.path.exists(reach):
+              L += ["### Exchange reachability from this runner", "```",
+                    open(reach).read().strip(), "```", ""]
+          qc = load(os.path.join(rep, "data_qc.json")) or {}
+
+          compares = sorted(glob.glob(os.path.join(rep, "real_compare_*.json")))
+          if not compares:
+              L += ["> ### ❌ Real-data study did NOT run",
+                    ">",
+                    "> No `real_compare_*.json` was produced.  Read the",
+                    "> *Probe exchange reachability* and *Download klines* steps:",
+                    "> HTTP 451 means the runner's IP range is geo-blocked by the",
+                    "> venue, and nothing here can fix that from CI.",
+                    ""]
+              print("::error::real-data study produced no reports — see the job summary "
+                    "(the green tick comes from continue-on-error, not from success)")
+          else:
+              L += ["> ### ✅ Real-data study completed", ""]
+              for path in compares:
+                  sym = os.path.basename(path)[len("real_compare_"):-len(".json")]
+                  d = load(path)
+                  if not d:
+                      continue
+                  L += [f"### {sym}", ""]
+                  q = qc.get(sym) or {}
+                  if q:
+                      L += [f"Data: **{q.get('bars', 0):,}** minutes "
+                            f"({q.get('covered_days')} of {q.get('requested_days')} days requested) · "
+                            f"{q.get('first')} .. {q.get('last')} · "
+                            f"missing {q.get('missing_minutes')} min ({q.get('missing_pct')}%) · "
+                            f"source `{q.get('source')}`", ""]
+                  comp = d.get("comparison") or {}
+                  L += ["| configuration | trades | return% | Sharpe | maxDD% | win% | E[R] | PF |",
+                        "|---|---:|---:|---:|---:|---:|---:|---:|"]
+                  for r in comp.get("rows") or []:
+                      L.append(f"| {r.get('label')} | {r.get('n_trades')} | "
+                               f"{num(r.get('return_pct'), '{:+.2f}')} | {num(r.get('sharpe'), '{:+.2f}')} | "
+                               f"{num(r.get('max_dd_pct'), '{:.2f}')} | "
+                               f"{num((r.get('win_rate') or 0) * 100, '{:.1f}')} | "
+                               f"{num(r.get('expectancy_r'))} | {num(r.get('profit_factor'), '{:.2f}')} |")
+                  L += ["", f"**verdict:** `{comp.get('verdict')}`", ""]
+                  strat = d.get("strategy") or {}
+                  tr = ((strat.get("metrics") or {}).get("trades") or {})
+                  if tr:
+                      L += [f"Decomposition (cash): gross {num(tr.get('gross_pnl_total'), '{:+,.0f}')} − "
+                            f"friction {num(tr.get('friction_total'), '{:,.0f}')} = "
+                            f"net {num(tr.get('net_pnl_total'), '{:+,.0f}')} · "
+                            f"E[R] {num(tr.get('expectancy_r'))} · n={tr.get('n')}", ""]
+                  funnel = strat.get("entry_funnel") or {}
+                  if funnel:
+                      L += [f"Entry funnel: {funnel.get('signals_emitted')} signals → "
+                            f"{funnel.get('orders_filled')} fills → "
+                            f"{funnel.get('positions_opened')} positions "
+                            f"(fill rate {num(funnel.get('fill_rate'), '{:.2f}')})", ""]
+                  ae = strat.get("accounting_errors") or []
+                  L += [f"Accounting errors: **{len(ae)}** "
+                        f"({'net == gross − costs holds on every trade' if not ae else str(ae[:2])})", ""]
+                  n = tr.get("n") or 0
+                  if n < 200:
+                      L += [f"> ⚠️ n={n} is far below the ~569 trades needed for 80% power at "
+                            "0.10R. Treat every number above as descriptive, not as evidence.", ""]
+
+                  sw = load(os.path.join(rep, f"real_sweep_{sym}.json"))
+                  if sw:
+                      L += [f"#### {sym} — confirmation-threshold sweep", "",
+                            "| min_edge_score | trades | return% | Sharpe | maxDD% | E[R] |",
+                            "|---:|---:|---:|---:|---:|---:|"]
+                      for r in sw.get("rows") or []:
+                          L.append(f"| {r.get('value')} | {r.get('trades')} | "
+                                   f"{num(r.get('return_pct'), '{:+.2f}')} | {num(r.get('sharpe'), '{:+.2f}')} | "
+                                   f"{num(r.get('max_dd_pct'), '{:.2f}')} | {num(r.get('expectancy_r'))} |")
+                      plat = sw.get("plateau") or {}
+                      wf = sw.get("walk_forward") or {}
+                      dsr = wf.get("deflated_sharpe") or {}
+                      pbo = wf.get("pbo") or {}
+                      L += ["",
+                            f"plateau pick: `{plat.get('chosen')}` "
+                            f"(agrees with the best single point: {plat.get('agrees')})",
+                            f"walk-forward: in-sample Sharpe {num(wf.get('is_sharpe_mean'), '{:+.2f}')} → "
+                            f"out-of-sample {num(wf.get('oos_sharpe'), '{:+.2f}')} · "
+                            f"overfit gap {num(wf.get('overfit_gap'), '{:+.2f}')}",
+                            f"deflated Sharpe: {num(dsr.get('dsr'), '{:.3f}')} "
+                            f"(passes 95%: {dsr.get('pass_95')}) · "
+                            f"PBO: {num(pbo.get('pbo'), '{:.2f}')} — {pbo.get('interpretation', '')}",
+                            ""]
+
+                  ab = load(os.path.join(rep, f"real_ablation_{sym}.json"))
+                  if ab:
+                      base = ab.get("baseline") or {}
+                      L += [f"#### {sym} — filter ablation", "",
+                            f"baseline: n={base.get('n_trades')} · E[R] {num(base.get('expectancy_r'))} · "
+                            f"Sharpe {num(base.get('sharpe'), '{:+.2f}')}", "",
+                            "| filter removed | trades | E[R] | Δ E[R] | Δ Sharpe | reading |",
+                            "|---|---:|---:|---:|---:|---|"]
+                      for name, r in (ab.get("filters") or {}).items():
+                          if not isinstance(r, dict):
+                              continue
+                          # the per-filter numbers live under `detail`; the deltas
+                          # are already "without this filter minus baseline"
+                          det = r.get("detail") or {}
+                          L.append(f"| {name} | {r.get('n_trades')} | "
+                                   f"{num(det.get('expectancy_r'))} | "
+                                   f"{num(r.get('delta_expectancy_r'))} | "
+                                   f"{num(r.get('delta_sharpe'), '{:+.2f}')} | "
+                                   f"{r.get('verdict', '')} |")
+                      L += ["", "_Δ is (filter removed) − baseline, so a **negative** Δ E[R] "
+                            "means the filter was earning money; `harmful` means removing it "
+                            "improves the result._", ""]
+
+          L += ["---", "",
+                "Costs are modelled (commission/funding bps + slippage + sqrt impact), not taken "
+                "from a real fee tier or realised fills; and there is no order-book depth model, "
+                "so a live position would move the price more than these numbers assume.", ""]
+          with open(summary, "a") as fh:
+              fh.write("\n".join(L) + "\n")
+          print("\n".join(L[:12]))
+          PY
+        working-directory: tbae
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: real-data-reports
-          path: |
-            reports/
+          path: reports/
           if-no-files-found: warn
           retention-days: 90
