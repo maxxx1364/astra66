@@ -168,13 +168,14 @@ jobs:
     needs: tests
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.run_real_data != 'false' }}
     runs-on: ubuntu-latest
-    # Raised from 60 -> 90 for the 4-symbol default.  The compute is cheap
-    # (measured on a full 365d/60m year: compare 12s + 5-point sweep 14s +
-    # ablation 21s = ~47s per symbol, so ~3min for four), but the kline
-    # download is ~525k one-minute bars per symbol over the public mirror and
-    # it scales linearly.  90 minutes leaves headroom for a slow mirror
-    # instead of having the job killed mid-download.
-    timeout-minutes: 90
+    # 180 for the 3-year universe.  The compute scales with the window
+    # (measured on 365d/60m: compare 12s + 5-point sweep 14s + ablation 21s
+    # ~= 47s per symbol, so roughly 2.5x that for 1095d, and the pipeline is
+    # rebuilt per invocation).  The download is ~1.6M one-minute bars per
+    # symbol from the vision archive — cheap in requests, not in bytes, and
+    # only on a cold cache.  Leave headroom rather than have the job killed
+    # mid-download, which would waste the one expensive part.
+    timeout-minutes: 180
     continue-on-error: true
     permissions:
       contents: write        # only this job needs it, to commit the report back
