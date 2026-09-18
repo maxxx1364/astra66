@@ -61,11 +61,36 @@ import urllib.request
 import zipfile
 from typing import Any, Iterable, Sequence
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.dirname(_HERE)
-for _p in (_ROOT, _HERE):
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+def _bootstrap_path() -> str:
+    """Put the directory that owns ``engine/`` on ``sys.path``.
+
+    This script imports the engine so that downloaded klines are parsed and
+    written by exactly the same code the backtester reads them with — no second
+    parser that could drift.  That coupling means the import has to survive the
+    script being moved (it has lived at the repository root and under
+    ``scripts/``), and being run from any working directory.  Walking upwards
+    for the package root is more robust than hard-coding ``../``.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    node = here
+    for _ in range(5):
+        if os.path.isdir(os.path.join(node, "engine")):
+            if node not in sys.path:
+                sys.path.insert(0, node)
+            return node
+        parent = os.path.dirname(node)
+        if parent == node:
+            break
+        node = parent
+    # Fall back to the documented layout (<root>/scripts/<this file>) so a
+    # checkout that only moves the file downwards still imports.
+    for cand in (os.path.dirname(here), here):
+        if cand not in sys.path:
+            sys.path.insert(0, cand)
+    return os.path.dirname(here)
+
+
+_ENGINE_ROOT = _bootstrap_path()
 
 from engine import feeds as feeds_mod                      # noqa: E402
 from engine.feeds import BinanceRestFeed, CsvFeed, MinuteBar  # noqa: E402
@@ -279,7 +304,14 @@ def qc(bars: Sequence[MinuteBar]) -> dict[str, Any]:
     ts = [b.ts for b in bars]
     span = (ts[-1] - ts[0]) // MINUTE_MS + 1
     dupes = len(ts) - len(set(ts))
-    invalid = validate_minutes(list(bars))
+    # validate_minutes raises; qc reports.  A store that grows by appends is
+    # exactly the place where a corrupt file will eventually show up, and a
+    # raised exception there kills the whole run over one bad block instead of
+    # naming it in the report.
+    try:
+        invalid = validate_minutes(list(bars))
+    except ValueError as exc:
+        invalid = str(exc)
     holes: list[str] = []
     prev = ts[0]
     for t in ts[1:]:
@@ -314,6 +346,63 @@ def _parse_date(s: str) -> int:
     raise ValueError(f"unrecognised date {s!r} (want YYYY-MM-DD)")
 
 
+def plan_append(path: str, start_ms: int, end_ms: int) -> dict[str, Any]:
+    """Decide what still needs downloading for ``[start_ms, end_ms]``.
+
+    The point of this function is that a long history is built once and then
+    *extended*, not re-downloaded.  Every scheduled run starts from whatever the
+    previous run left on disk and fetches only the contiguous block that starts
+    one minute after the last bar it already has, so the store grows by days
+    instead of being rebuilt by years.  That is also what makes the download
+    survivable: a six-year 1-minute backfill costs six years of requests the
+    first time and a few days' worth ever after.
+
+    Only the forward edge is extended.  A gap *behind* the existing data
+    (because the requested window was widened at the start) is reported in
+    ``backfill_gap_minutes`` and left alone: backfilling means re-deriving the
+    whole range, and silently doing that would defeat the purpose.
+    """
+    plan: dict[str, Any] = {
+        "path": path, "exists": os.path.exists(path),
+        "existing_bars": 0, "fetch_start": start_ms, "fetch_end": end_ms,
+        "cache_hit": False, "appending": False,
+        "backfill_gap_minutes": 0,
+    }
+    if not plan["exists"]:
+        return plan
+
+    try:
+        have = CsvFeed(path).load()
+    except Exception as exc:                       # unreadable/corrupt store
+        plan["load_error"] = f"{type(exc).__name__}: {exc}"
+        return plan
+
+    plan["existing_bars"] = len(have)
+    if not have:
+        return plan
+
+    first_ts, last_ts = have[0].ts, have[-1].ts
+    plan["existing_first"] = _iso(first_ts)
+    plan["existing_last"] = _iso(last_ts)
+
+    gap_front = first_ts - start_ms
+    if gap_front > MINUTE_MS:
+        plan["backfill_gap_minutes"] = gap_front // MINUTE_MS
+
+    if last_ts >= end_ms:
+        plan["cache_hit"] = True
+        return plan
+
+    # +1 minute so the new block is adjacent to — not overlapping — the stored
+    # series.  `merge` de-duplicates anyway, but asking for the exact boundary
+    # keeps the round-trip idempotent and the request count minimal.
+    plan["fetch_start"] = last_ts + MINUTE_MS
+    plan["fetch_end"] = end_ms
+    plan["appending"] = True
+    plan["existing"] = have
+    return plan
+
+
 def default_out_path(out_dir: str, symbol: str, interval: str, start_ms: int,
                      end_ms: int) -> str:
     stamp_a = dt.datetime.fromtimestamp(start_ms / 1000.0, dt.timezone.utc).strftime("%Y%m%d")
@@ -343,6 +432,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                          "ending at the last month boundary")
     ap.add_argument("--out-dir", default=os.path.join("data", "binance"))
     ap.add_argument("--out", help="explicit output path (single symbol only)")
+    ap.add_argument("--append", action="store_true",
+                    help="extend an existing store forward instead of re-downloading it "
+                         "(only the contiguous block after the last stored bar is fetched)")
+    ap.add_argument("--gzip", action="store_true",
+                    help="write .csv.gz instead of .csv (~34%% of the size); "
+                         "CsvFeed reads both transparently")
     ap.add_argument("--mirror", action="store_true",
                     help=f"use {REST_MIRROR} instead of {REST_BASE} (geo-blocked regions)")
     ap.add_argument("--no-verify", action="store_true", help="skip sha256 verification")
@@ -383,20 +478,56 @@ def main(argv: Sequence[str] | None = None) -> int:
         if source == "auto":
             source = "vision" if span_days > AUTO_VISION_DAYS else "rest"
         out = a.out or default_out_path(a.out_dir, sym, a.interval, start_ms, end_ms)
-        if os.path.exists(out) and not a.force:
+        if a.gzip and not out.endswith((".gz", ".gzip")):
+            out += ".gz"
+
+        reused: list[MinuteBar] = []
+        start_ms_sym, end_ms_sym = start_ms, end_ms
+        have_cached = os.path.exists(out) and not a.force
+
+        if a.append and not a.force:
+            plan = plan_append(out, start_ms, end_ms)
+            if plan.get("load_error"):
+                log(f"[{sym}] could not read {out} ({plan['load_error']}) — full fetch")
+            elif plan["cache_hit"]:
+                log(f"[{sym}] {out} already covers {plan['existing_last']} — nothing to fetch")
+                bars = CsvFeed(out).load()
+                source = "cache"
+                checks = qc(bars)
+                size = os.path.getsize(out)
+                report["symbols"][sym] = {
+                    "source": "cache", "path": out, "bytes": size,
+                    "appended_bars": 0, **checks,
+                }
+                continue
+            elif plan["appending"]:
+                reused = plan["existing"]
+                log(f"[{sym}] append: have {plan['existing_bars']:,} bars to "
+                    f"{plan['existing_last']} — fetching "
+                    f"{_iso(plan['fetch_start'])} .. {_iso(plan['fetch_end'])}")
+                if plan["backfill_gap_minutes"]:
+                    log(f"[{sym}] NOTE: store starts {plan['existing_first']}, "
+                        f"{plan['backfill_gap_minutes']:,} minutes after the requested "
+                        f"start — that gap is not backfilled")
+                start_ms_sym, end_ms_sym = plan["fetch_start"], plan["fetch_end"]
+        elif have_cached:
             log(f"[{sym}] {out} exists — using it (pass --force to re-download)")
             bars = CsvFeed(out).load()
             source = "cache"
-        else:
-            log(f"[{sym}] {source} {_iso(start_ms)} .. {_iso(end_ms)}")
+
+        if source != "cache":
+            log(f"[{sym}] {source} {_iso(start_ms_sym)} .. {_iso(end_ms_sym)}")
             t0 = time.perf_counter()
             if source == "vision":
-                raw = fetch_vision(sym, a.interval, start_ms, end_ms,
+                raw = fetch_vision(sym, a.interval, start_ms_sym, end_ms_sym,
                                    granularity=a.granularity, tail=a.tail,
                                    verify=not a.no_verify, log=log)
             else:
-                raw = fetch_rest(sym, a.interval, start_ms, end_ms, base=rest_base, log=log)
-            bars = merge(raw, start_ms, end_ms)
+                raw = fetch_rest(sym, a.interval, start_ms_sym, end_ms_sym,
+                                 base=rest_base, log=log)
+            # Clip to the *full* requested window, not the append sub-range: the
+            # stored prefix is already inside it and must survive the trim.
+            bars = merge(list(reused) + list(raw), start_ms, end_ms)
             log(f"[{sym}] merged {len(bars):,} bars in {time.perf_counter()-t0:.1f}s")
 
         checks = qc(bars)
@@ -412,9 +543,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         feeds_mod.write_minutes_csv(bars, out)
         size = os.path.getsize(out)
-        log(f"[{sym}] wrote {out} ({size/1e6:.2f} MB) — {checks['first']} .. {checks['last']}")
+        appended = len(bars) - len(reused)
+        log(f"[{sym}] wrote {out} ({size/1e6:.2f} MB) — {checks['first']} .. {checks['last']}"
+            + (f" · +{appended:,} appended" if reused else ""))
         report["symbols"][sym] = {
-            "source": source, "path": out, "bytes": size, **checks,
+            "source": source, "path": out, "bytes": size,
+            "reused_bars": len(reused), "appended_bars": max(appended, 0), **checks,
         }
 
     if a.json:

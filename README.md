@@ -9,7 +9,7 @@
 و بک‌تستی که هویت حسابداری‌اش با تست قفل شده است.
 
 > نسخهٔ فعلی: `0.2.0` — فاز ۱ (موتور + API) **و فاز ۳ (بک‌تست استراتژی)**.
-> زبان: Python خالص (کتابخانهٔ استاندارد؛ بدون numpy/pandas) — `562` تست.
+> زبان: Python خالص (کتابخانهٔ استاندارد؛ بدون numpy/pandas) — `592` تست.
 
 **وضعیت پژوهشی در یک خط:** فیلترهای تأیید لبهٔ ناخالصِ مثبت و معنادار می‌سازند
 (`+0.112R` در هر معامله، `t = +2.69`، n=372 روی ۲۰ پنجرهٔ مستقل)، اما پس از هزینه
@@ -26,7 +26,7 @@ cd tbae
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 
-# تست‌ها (۵۶۲ تست، ≈ ۳۳ ثانیه)
+# تست‌ها (۵۹۲ تست در ۸ فایل، ≈ ۳۰ ثانیه)
 python3 -m pytest
 
 # API + Swagger
@@ -48,6 +48,38 @@ python3 scripts/cost_attribution.py --seeds 20 --days 45 --tf 15 --json reports/
 `--feed csv:/path/to/minutes.csv`، و `--feed binance:BTCUSDT:days=45`
 (نیاز به دسترسی شبکه؛ کد REST با pagination/retry و WebSocket با ring buffer نوشته
 و آفلاین تست شده است).
+
+### ۱.۱ گرفتن دادهٔ واقعی
+
+`scripts/fetch_binance.py` کندل‌ها را از دو راه می‌گیرد و با **همان** کدی می‌نویسد
+که بک‌تست می‌خواند (`CsvFeed`)، پس parserِ دومی وجود ندارد که از اولی منحرف شود:
+
+```bash
+# آرشیو vision (یک zip برای هر ماه، SHA256 منتشرشده) — برای بازه‌های بلند
+python3 scripts/fetch_binance.py --symbols XRPUSDT \
+        --start 2020-01-01 --end 2026-09-18 --gzip
+
+# فقط بلوکی که کم است را بگیر و به فروشگاهِ موجود بچسبان
+python3 scripts/fetch_binance.py --symbols XRPUSDT \
+        --start 2020-01-01 --end 2026-09-18 --append
+
+python3 -m app.cli compare --feed csv:data/binance/XRPUSDT_1m_20200101_20260918.csv.gz --tf 60
+```
+
+* **`--source auto`** برای بازه‌های بلندتر از ۲۱ روز سراغ آرشیو vision می‌رود
+  (یک درخواست به‌ازای هر ماه) و برای کوتاه‌ترها سراغ REST.
+* **`--append`** فروشگاه را رو به جلو گسترش می‌دهد: فقط بلوکِ **چسبیده** به آخرین
+  میلهٔ ذخیره‌شده دانلود می‌شود. پس تاریخِ بلند یک‌بار ساخته می‌شود و بعد با هزینهٔ
+  چند روز در هر اجرا نگه داشته می‌شود. شکافِ پشتِ داده (اگر ابتدای بازه را عقب
+  ببرید) فقط **گزارش** می‌شود، پر نمی‌شود.
+* **`--gzip`** خروجی را `.csv.gz` می‌نویسد (~۳۴٪ حجم) و `CsvFeed` هر دو را
+  یکسان می‌خواند.
+* خروجی قبل از نوشتن از QC می‌گذرد: دقیقه‌های گم‌شده، تکراری، حفره‌ها و نامعتبر
+  بودن OHLC در `--json` گزارش می‌شود — بی‌صدا درست نمی‌شود.
+
+> نیازی به API key نیست (کندل‌ها دادهٔ عمومی بازارند). اگر `BINANCE_API_KEY` تنظیم
+> شود فرستاده می‌شود و سقف نرخ بالا می‌رود. `api.binance.com` در بعضی کشورها
+> HTTP 451 می‌دهد؛ `--mirror` میزبان را به `data-api.binance.vision` می‌برد.
 
 ---
 
@@ -82,11 +114,12 @@ tbae/
 │   ├── main.py              FastAPI: ۲۱ endpoint + گارد look-ahead
 │   └── cli.py               خط فرمان: bars/signals/backtest/compare/sweep/ablation/path
 ├── scripts/
-│   └── cost_attribution.py  پژوهش ادغام‌شدهٔ هزینه روی چند seed مستقل
+│   ├── cost_attribution.py  پژوهش ادغام‌شدهٔ هزینه روی چند seed مستقل
+│   └── fetch_binance.py     دانلودر کندل‌ها (آرشیو vision + REST) با QC و الحاق افزایشی
 ├── docs/
 │   ├── SPEC.md              مشخصات مهندسی: قراردادها و اینواریانت‌ها
 │   └── RESEARCH.md          یافته‌های پژوهشی با اعداد قابل بازتولید
-├── tests/                   ۵۶۲ تست در ۶ فایل
+├── tests/                   ۵۹۲ تست در ۸ فایل
 └── requirements.txt
 ```
 
@@ -303,7 +336,7 @@ binding نامرئی). زبان قواعد کاربر مقایسه و `and/or/no
 
 | بررسی | نتیجه |
 |---|---|
-| `python3 -m pytest` | **۵۶۲ تست پاس** در ۶ فایل: engine (۱۲۹)، strategy (۸۴)، backtest (۵۷)، metrics/validation (۹۶)، rules (۸۱)، feeds (۵۹)، api (۵۶) |
+| `python3 -m pytest` | **۵۹۲ تست پاس** در ۸ فایل: engine (۱۲۹)، strategy (۸۴)، metrics/validation (۹۶)، rules (۸۱)، backtest (۵۷)، feeds (۵۹)، api (۵۶)، fetch (۳۰) |
 | هویت حسابداری | `net == gross − costs` روی همهٔ معامله‌های همهٔ اجراها؛ نقض ⇒ `accounting_errors` |
 | علّیت پایان‌به‌پایان | اجرای مجدد روی تاریخچهٔ کوتاه‌تر، معامله‌های بازهٔ مشترک را **دقیقاً** بازتولید می‌کند |
 | بازتولیدپذیری داده | `(seed, days)` ⇒ دادهٔ bit-identical؛ هیچ خوانشی از ساعت دیواری |

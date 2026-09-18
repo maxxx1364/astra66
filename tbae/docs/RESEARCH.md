@@ -212,7 +212,7 @@ mean(net R)  =  mean(gross R)  −  mean(friction R)
 
 ```bash
 cd tbae
-python3 -m pytest                                    # ۵۶۲ تست (≈ ۳۳ ثانیه)
+python3 -m pytest                                    # ۵۹۲ تست (≈ ۳۰ ثانیه)
 python3 -m app.cli compare --tf 15 --days 45 --seed 7        # بخش ۲
 python3 scripts/cost_attribution.py --seeds 20 --days 45 --tf 15 \
         --json reports/cost_attribution.json                 # بخش ۳ (≈ ۲ دقیقه)
