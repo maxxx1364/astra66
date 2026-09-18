@@ -394,6 +394,19 @@ jobs:
               except Exception:
                   return None
 
+          def money(x):
+              """3.6e+06 reads as noise; the summary is for humans."""
+              try:
+                  v = float(x)
+              except (TypeError, ValueError):
+                  return "—"
+              if v != v:
+                  return "—"
+              for unit, div in (("B", 1e9), ("M", 1e6), ("K", 1e3)):
+                  if abs(v) >= div:
+                      return f"{v / div:.1f}{unit}"
+              return f"{v:.0f}"
+
           def num(x, fmt="{:+.4f}"):
               try:
                   v = float(x)
@@ -441,14 +454,16 @@ jobs:
                             f"{q.get('first')} .. {q.get('last')} · "
                             f"missing {q.get('missing_minutes')} min ({q.get('missing_pct')}%) · "
                             f"source `{q.get('source')}`", ""]
-                  man = strat.get("manifest") or {}
+                  # Read off `d`, not `strat`: that name is bound further down
+                  # the loop, and this line sits above it.
+                  man = (d.get("strategy") or {}).get("manifest") or {}
                   cm = man.get("costs") or {}
                   ccal = man.get("cost_calibration") or {}
                   if cm:
                       adv = ccal.get("adv_notional")
                       L += [f"Costs: fee {num(cm.get('commission_bps'))}/{num(cm.get('maker_bps'))} bp "
                             f"(taker/maker) · slippage {num(cm.get('slippage_bps'))} bp · "
-                            f"ADV {('%.3g' % adv) if adv else '—'} "
+                            f"ADV {money(adv)} "
                             f"({'measured' if 'adv_notional' in (ccal.get('measured') or []) else 'PLACEHOLDER'})"
                             + (f" · tick {ccal.get('tick_size')}" if ccal.get("tick_size") else ""), ""]
                   comp = d.get("comparison") or {}
