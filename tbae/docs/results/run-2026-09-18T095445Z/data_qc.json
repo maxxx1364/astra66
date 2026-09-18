@@ -1,0 +1,58 @@
+{
+  "BTCUSDT": {
+    "symbol": "BTCUSDT",
+    "source": "https://data-api.binance.vision",
+    "path": "data/binance/BTCUSDT_1m.csv",
+    "bytes": 52884363,
+    "bars": 525601,
+    "first": "2025-09-18T00:00:00Z",
+    "last": "2026-09-18T00:00:00Z",
+    "requested_days": 365,
+    "covered_days": 365.0,
+    "span_minutes": 525601,
+    "missing_minutes": 0,
+    "missing_pct": 0.0
+  },
+  "ETHUSDT": {
+    "symbol": "ETHUSDT",
+    "source": "https://data-api.binance.vision",
+    "path": "data/binance/ETHUSDT_1m.csv",
+    "bytes": 51215629,
+    "bars": 525601,
+    "first": "2025-09-18T00:00:00Z",
+    "last": "2026-09-18T00:00:00Z",
+    "requested_days": 365,
+    "covered_days": 365.0,
+    "span_minutes": 525601,
+    "missing_minutes": 0,
+    "missing_pct": 0.0
+  },
+  "SOLUSDT": {
+    "symbol": "SOLUSDT",
+    "source": "https://data-api.binance.vision",
+    "path": "data/binance/SOLUSDT_1m.csv",
+    "bytes": 47709655,
+    "bars": 525601,
+    "first": "2025-09-18T00:00:00Z",
+    "last": "2026-09-18T00:00:00Z",
+    "requested_days": 365,
+    "covered_days": 365.0,
+    "span_minutes": 525601,
+    "missing_minutes": 0,
+    "missing_pct": 0.0
+  },
+  "BNBUSDT": {
+    "symbol": "BNBUSDT",
+    "source": "https://data-api.binance.vision",
+    "path": "data/binance/BNBUSDT_1m.csv",
+    "bytes": 47710497,
+    "bars": 525601,
+    "first": "2025-09-18T00:00:00Z",
+    "last": "2026-09-18T00:00:00Z",
+    "requested_days": 365,
+    "covered_days": 365.0,
+    "span_minutes": 525601,
+    "missing_minutes": 0,
+    "missing_pct": 0.0
+  }
+}
