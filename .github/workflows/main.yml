@@ -1,4 +1,4 @@
-
+name: backtest
 
 # Three jobs, in order of how much they need the outside world:
 #
@@ -30,7 +30,7 @@ on:
     inputs:
       symbols:
         description: "Comma-separated symbols"
-        default: "BTCUSDT"
+        default: "BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT"
       days:
         description: "Days of 1m history to download"
         default: "365"
@@ -53,12 +53,18 @@ permissions:
   contents: read
 
 env:
+  # push/schedule events carry no inputs, so these fallbacks decide what those
+  # runs study.  They match the workflow_dispatch defaults (365d / 60m / 90d) so
+  # that a run triggered by editing this file publishes the SAME configuration as
+  # a manual run, instead of silently falling back to the old 90d / 15m study and
+  # overwriting LATEST.md with it.  Symbols stay single for push/schedule: those
+  # runs are a regression check, not the study itself.
   SYMBOLS: ${{ github.event.inputs.symbols || 'BTCUSDT' }}
   # PR events keep the download small: a PR check proves the path works on real
   # data, it does not need to re-run the whole study.
-  DAYS: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.days || '90') }}
-  TF: ${{ github.event.inputs.tf || '15' }}
-  WINDOW: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.window || '45') }}
+  DAYS: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.days || '365') }}
+  TF: ${{ github.event.inputs.tf || '60' }}
+  WINDOW: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.window || '90') }}
   SEEDS_SYNTH: ${{ github.event_name == 'pull_request' && '4' || '20' }}
 
 jobs:
@@ -156,7 +162,13 @@ jobs:
     needs: tests
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.run_real_data != 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Raised from 60 -> 90 for the 4-symbol default.  The compute is cheap
+    # (measured on a full 365d/60m year: compare 12s + 5-point sweep 14s +
+    # ablation 21s = ~47s per symbol, so ~3min for four), but the kline
+    # download is ~525k one-minute bars per symbol over the public mirror and
+    # it scales linearly.  90 minutes leaves headroom for a slow mirror
+    # instead of having the job killed mid-download.
+    timeout-minutes: 90
     continue-on-error: true
     permissions:
       contents: write        # only this job needs it, to commit the report back
@@ -231,6 +243,15 @@ jobs:
           DAY = 86_400_000
           symbols = [s.strip().upper() for s in os.environ.get("SYMBOLS", "BTCUSDT").split(",") if s.strip()]
           days = int(os.environ.get("DAYS", "90"))
+          # Pin the window to UTC midnight instead of "now".  With `end = now`
+          # every run analysed a slightly different set of bars, which is why the
+          # random-entry control moved between runs (159 -> 136 -> 174 trades)
+          # even though it is seeded (app/cli.py passes --seed, default 20260913,
+          # straight into BacktestConfig(random_seed=...)).  The seed was never
+          # the problem; the moving window was.  Now two runs on the same UTC day
+          # see identical data, so published reports are directly comparable.
+          # NB: time.time() is SECONDS — floor in seconds, then convert to ms.
+          # (`time.time() // 86_400_000` silently yields 1970-01-21.)
           end = int(time.time() // 86400 * 86400 * 1000)
           start = end - days * DAY
           bases = ["https://api.binance.com", "https://data-api.binance.vision"]
@@ -300,7 +321,7 @@ jobs:
               --json "../reports/real_compare_${SYM}.json" || status=1
             echo "=== $SYM: confirmation-threshold sweep ==="
             python -m app.cli sweep --feed "csv:$CSV" --tf "$TF" \
-              --param min_edge_score --grid 0.45,0.6,0.75,0.8 \
+              --param min_edge_score --grid 0.45,0.6,0.75,0.8,0.85 \
               --json "../reports/real_sweep_${SYM}.json" || status=1
             echo "=== $SYM: filter ablation ==="
             python -m app.cli ablation --feed "csv:$CSV" --tf "$TF" \
@@ -338,6 +359,13 @@ jobs:
               L += ["### Exchange reachability from this runner", "```",
                     open(reach).read().strip(), "```", ""]
           qc = load(os.path.join(rep, "data_qc.json")) or {}
+          # A grid point (or a symbol) below this many trades cannot support a
+          # Sharpe or plateau reading.  Such rows are still printed — the shape
+          # of the curve matters — but they are flagged and excluded from the
+          # filtered plateau pick below.
+          MIN_TRADES = 30
+          POWER_N = 569          # trades for 80% power at 0.10R (see MDE study)
+          pooled = []
 
           compares = sorted(glob.glob(os.path.join(rep, "real_compare_*.json")))
           if not compares:
@@ -396,13 +424,32 @@ jobs:
                       L += [f"> ⚠️ n={n} is far below the ~569 trades needed for 80% power at "
                             "0.10R. Treat every number above as descriptive, not as evidence.", ""]
 
+                  pooled.append({
+                      "sym": sym,
+                      "n": tr.get("n") or 0,
+                      "expectancy_r": tr.get("expectancy_r"),
+                      "win_rate": tr.get("win_rate"),
+                      "gross": tr.get("gross_pnl_total") or 0.0,
+                      "friction": tr.get("friction_total") or 0.0,
+                      "net": tr.get("net_pnl_total") or 0.0,
+                      "return_pct": ((strat.get("metrics") or {}).get("returns") or {}).get("total_return_pct"),
+                      "max_dd_pct": ((strat.get("metrics") or {}).get("risk") or {}).get("max_drawdown_pct"),
+                      "signals": funnel.get("signals_emitted") or 0,
+                      "fills": funnel.get("orders_filled") or 0,
+                      "accounting_errors": len(ae),
+                      "verdict": comp.get("verdict"),
+                  })
+
                   sw = load(os.path.join(rep, f"real_sweep_{sym}.json"))
                   if sw:
+                      srows = sw.get("rows") or []
+                      thin = [r for r in srows if (r.get("trades") or 0) < MIN_TRADES]
                       L += [f"#### {sym} — confirmation-threshold sweep", "",
                             "| min_edge_score | trades | return% | Sharpe | maxDD% | E[R] |",
                             "|---:|---:|---:|---:|---:|---:|"]
-                      for r in sw.get("rows") or []:
-                          L.append(f"| {r.get('value')} | {r.get('trades')} | "
+                      for r in srows:
+                          flag = " ⚠️" if (r.get("trades") or 0) < MIN_TRADES else ""
+                          L.append(f"| {r.get('value')} | {r.get('trades')}{flag} | "
                                    f"{num(r.get('return_pct'), '{:+.2f}')} | {num(r.get('sharpe'), '{:+.2f}')} | "
                                    f"{num(r.get('max_dd_pct'), '{:.2f}')} | {num(r.get('expectancy_r'))} |")
                       plat = sw.get("plateau") or {}
@@ -419,6 +466,37 @@ jobs:
                             f"(passes 95%: {dsr.get('pass_95')}) · "
                             f"PBO: {num(pbo.get('pbo'), '{:.2f}')} — {pbo.get('interpretation', '')}",
                             ""]
+                      if thin:
+                          # Empty or near-empty grid points do not merely add
+                          # noise: they change the answer.  Measured on a year of
+                          # 60m data, adding 0.90/0.95 (n=0) made the plateau
+                          # heuristic reject the n=20 point as a "spike" and pick
+                          # an n=5 point instead, and pushed PBO to 0.89.
+                          L += [f"> ⚠️ **{len(thin)} of {len(srows)} grid points have n < {MIN_TRADES}** "
+                                f"({', '.join(str(t.get('value')) for t in thin)}). Their Sharpe values are "
+                                "noise. The CLI computes the plateau, walk-forward and PBO over **all** "
+                                "grid points, so those three readings just above are contaminated by these "
+                                "rows — read the filtered pick below instead.", ""]
+                          kept = [(r.get("value"), r.get("sharpe")) for r in srows
+                                  if (r.get("trades") or 0) >= MIN_TRADES]
+                          if len(kept) >= 3:
+                              try:
+                                  from engine import validation as _val
+                                  fp = _val.best_plateau(kept, window=1)
+                                  L += [f"> **plateau pick over the {len(kept)} grid points with "
+                                        f"n ≥ {MIN_TRADES}: `{fp.get('chosen')}`** "
+                                        f"(best single point `{fp.get('best_point_value')}`, "
+                                        f"agrees: {fp.get('agrees')}, "
+                                        f"spikes: {[x.get('value') for x in (fp.get('rows') or []) if x.get('is_spike')]})",
+                                        ""]
+                              except Exception as exc:
+                                  L += [f"> filtered plateau pick unavailable: "
+                                        f"{type(exc).__name__}: {exc}", ""]
+                          else:
+                              L += [f"> filtered plateau pick unavailable: only {len(kept)} grid "
+                                    f"point(s) have n ≥ {MIN_TRADES}, and a plateau needs at least 3.",
+                                    ""]
+
 
                   ab = load(os.path.join(rep, f"real_ablation_{sym}.json"))
                   if ab:
@@ -442,6 +520,53 @@ jobs:
                       L += ["", "_Δ is (filter removed) − baseline, so a **negative** Δ E[R] "
                             "means the filter was earning money; `harmful` means removing it "
                             "improves the result._", ""]
+
+              if pooled:
+                  tot_n = sum(p["n"] for p in pooled)
+                  tot_gross = sum(p["gross"] for p in pooled)
+                  tot_fric = sum(p["friction"] for p in pooled)
+                  tot_net = sum(p["net"] for p in pooled)
+                  tot_sig = sum(p["signals"] for p in pooled)
+                  tot_fill = sum(p["fills"] for p in pooled)
+                  tot_err = sum(p["accounting_errors"] for p in pooled)
+                  L += ["### Pooled across symbols", "",
+                        "| symbol | trades | return% | maxDD% | win% | E[R] | gross$ | friction$ | net$ |",
+                        "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+                  for p in pooled:
+                      L.append(f"| {p['sym']} | {p['n']} | {num(p['return_pct'], '{:+.2f}')} | "
+                               f"{num(p['max_dd_pct'], '{:.2f}')} | "
+                               f"{num((p['win_rate'] or 0) * 100, '{:.1f}')} | {num(p['expectancy_r'])} | "
+                               f"{num(p['gross'], '{:+,.0f}')} | {num(p['friction'], '{:,.0f}')} | "
+                               f"{num(p['net'], '{:+,.0f}')} |")
+                  w_er = (sum((p["expectancy_r"] or 0.0) * p["n"] for p in pooled) / tot_n) if tot_n else None
+                  L += [f"| **pooled** | **{tot_n}** | — | — | — | **{num(w_er)}** | "
+                        f"**{tot_gross:+,.0f}** | **{tot_fric:,.0f}** | **{tot_net:+,.0f}** |",
+                        "",
+                        f"Signals {tot_sig} → fills {tot_fill} → positions {tot_n} · "
+                        f"accounting errors **{tot_err}** · "
+                        f"friction ÷ gross = {num((tot_fric / tot_gross) if tot_gross else None, '{:.2f}')}",
+                        ""]
+                  # Pooled E[R] is the trade-count-weighted mean of the per-symbol
+                  # expectancies — the right way to pool a per-trade statistic.
+                  # It is NOT a portfolio equity curve: each symbol was traded as
+                  # its own account, so pooled return%/maxDD are not computed.
+                  if tot_n >= POWER_N:
+                      L += [f"> ✅ **pooled n = {tot_n} ≥ {POWER_N}** — the study now has 80% power to "
+                            "detect a 0.10R per-trade edge, so the pooled E[R] can be read as evidence "
+                            "and not only as description. The individual symbols still cannot.", ""]
+                  else:
+                      L += [f"> ⚠️ pooled n = {tot_n} is still below the ~{POWER_N} trades needed for "
+                            "80% power at 0.10R.", ""]
+                  if len(pooled) > 1:
+                      pos = [p["sym"] for p in pooled if (p["expectancy_r"] or 0.0) > 0]
+                      L += [f"> positive E[R] in {len(pos)} of {len(pooled)} symbols"
+                            + (f" ({', '.join(pos)})" if pos else "")
+                            + ". An edge that appears in only one symbol is a symbol-specific story, "
+                              "not an edge.", ""]
+                      thin_syms = [p["sym"] for p in pooled if p["n"] < MIN_TRADES]
+                      if thin_syms:
+                          L += [f"> ⚠️ {', '.join(thin_syms)} contributed fewer than {MIN_TRADES} trades "
+                                "and should be dropped from the pooled figure rather than trusted.", ""]
 
           L += ["---", "",
                 "Costs are modelled (commission/funding bps + slippage + sqrt impact), not taken "
