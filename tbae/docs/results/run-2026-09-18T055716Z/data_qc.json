@@ -1,0 +1,16 @@
+{
+  "BTCUSDT": {
+    "symbol": "BTCUSDT",
+    "source": "https://data-api.binance.vision",
+    "path": "data/binance/BTCUSDT_1m.csv",
+    "bytes": 12793355,
+    "bars": 129601,
+    "first": "2026-06-20T05:53:00Z",
+    "last": "2026-09-18T05:53:00Z",
+    "requested_days": 90,
+    "covered_days": 90.0,
+    "span_minutes": 129601,
+    "missing_minutes": 0,
+    "missing_pct": 0.0
+  }
+}
