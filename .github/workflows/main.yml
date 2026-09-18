@@ -33,13 +33,13 @@ on:
         default: "BTCUSDT"
       days:
         description: "Days of 1m history to download"
-        default: "90"
+        default: "365"
       tf:
         description: "Timeframe (minutes)"
-        default: "15"
+        default: "60"
       window:
         description: "Synthetic study window (days)"
-        default: "45"
+        default: "90"
       run_real_data:
         description: "Download real data (slower)"
         type: boolean
