@@ -432,6 +432,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                          "ending at the last month boundary")
     ap.add_argument("--out-dir", default=os.path.join("data", "binance"))
     ap.add_argument("--out", help="explicit output path (single symbol only)")
+    ap.add_argument("--store", action="store_true",
+                    help="write to the per-symbol accumulating store "
+                         f"<out-dir>/<SYMBOL>_<interval>.csv[.gz] instead of a "
+                         "date-stamped snapshot.  Required for --append to work "
+                         "across runs: a name containing the end date changes "
+                         "every run, so the next run cannot find the store it "
+                         "is supposed to extend.")
     ap.add_argument("--append", action="store_true",
                     help="extend an existing store forward instead of re-downloading it "
                          "(only the contiguous block after the last stored bar is fetched)")
@@ -477,7 +484,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         source = a.source
         if source == "auto":
             source = "vision" if span_days > AUTO_VISION_DAYS else "rest"
-        out = a.out or default_out_path(a.out_dir, sym, a.interval, start_ms, end_ms)
+        if a.out:
+            out = a.out
+        elif a.store:
+            # No dates in the name: this file is a store that outlives the run,
+            # not a snapshot of one window.
+            out = os.path.join(a.out_dir, f"{sym}_{a.interval}.csv")
+        else:
+            out = default_out_path(a.out_dir, sym, a.interval, start_ms, end_ms)
         if a.gzip and not out.endswith((".gz", ".gzip")):
             out += ".gz"
 

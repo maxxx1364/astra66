@@ -390,3 +390,39 @@ def test_main_gzip_flag_changes_the_container(tmp_path, monkeypatch):
     produced = list(tmp_path.glob("*.csv.gz"))
     assert produced, f"expected a .csv.gz store, found {[f.name for f in tmp_path.iterdir()]}"
     assert CsvFeed(str(produced[0])).load()
+
+
+def test_store_flag_gives_a_date_free_name_so_append_can_find_it(tmp_path, monkeypatch):
+    """The bug this flag fixes: ``default_out_path`` stamps both ends of the
+    window into the filename, and ``--days`` ends the window at *now*.  So the
+    name changed on every run and the next run could never find the store it
+    was meant to extend — `--append` silently re-downloaded everything."""
+    def fake_fetch_rest(sym, interval, start_ms, end_ms, *, base=None, log=print):
+        return bars(start_ms, min(60, (end_ms - start_ms) // MINUTE_MS + 1))
+
+    monkeypatch.setattr(fb, "fetch_rest", fake_fetch_rest)
+
+    rc = fb.main(["--symbols", "XRPUSDT", "--days", "30", "--source", "rest",
+                  "--store", "--gzip", "--out-dir", str(tmp_path), "--quiet"])
+    assert rc == 0
+    assert (tmp_path / "XRPUSDT_1m.csv.gz").exists()
+
+    # A second run, later, must resolve to the same path and extend it.
+    rc = fb.main(["--symbols", "XRPUSDT", "--days", "30", "--source", "rest",
+                  "--store", "--append", "--gzip", "--out-dir", str(tmp_path),
+                  "--quiet"])
+    assert rc == 0
+    assert [p.name for p in tmp_path.glob("*.csv.gz")] == ["XRPUSDT_1m.csv.gz"]
+
+
+def test_snapshot_mode_keeps_the_date_stamp(tmp_path, monkeypatch):
+    """Without --store the file stays a dated snapshot — which is what gets
+    published to the klines release."""
+    def fake_fetch_rest(sym, interval, start_ms, end_ms, *, base=None, log=print):
+        return bars(start_ms, min(60, (end_ms - start_ms) // MINUTE_MS + 1))
+
+    monkeypatch.setattr(fb, "fetch_rest", fake_fetch_rest)
+    fb.main(["--symbols", "BTCUSDT", "--start", _day(T0), "--end", _day(T0),
+             "--source", "rest", "--out-dir", str(tmp_path), "--quiet"])
+    names = [p.name for p in tmp_path.iterdir()]
+    assert names == [f"BTCUSDT_1m_{_day(T0).replace('-', '')}_{_day(T0).replace('-', '')}.csv"]
