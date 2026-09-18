@@ -238,13 +238,26 @@ def cmd_signals(args: argparse.Namespace) -> int:
     return 0
 
 
-def _risk_config(args: argparse.Namespace) -> RiskConfig:
+def _risk_config(args: argparse.Namespace, res: Any) -> RiskConfig:
     """Build the risk config from CLI flags.
 
     Costs live on ``RiskConfig.costs`` (a :class:`CostConfig`), not on
     ``RiskConfig`` itself — keeping that knowledge in one helper is what stops a
     caller from inventing a ``commission_bps=`` keyword that does not exist.
+
+    When the data is real and ``--no-calibrate-costs`` was not given, the two
+    placeholder cost parameters that *can* be measured from the data —
+    market-impact depth (ADV) and the tick-implied spread floor — are replaced
+    by their measured values.  Fees are not: the fee schedule depends on the
+    account's VIP tier, not on the market, so it stays a declared input.
+
+    Synthetic input is deliberately left on the declared placeholders.  Its
+    prices are floats off a generator, so a "measured" tick would be floating
+    point residue rather than a venue constraint — and calibrating it would
+    silently move the published synthetic study off its own baseline.
     """
+    from engine import venues
+
     rcfg = RiskConfig(initial_equity=args.equity,
                       risk_per_trade_pct=args.risk_pct,
                       sizing_mode=args.sizing,
@@ -252,6 +265,16 @@ def _risk_config(args: argparse.Namespace) -> RiskConfig:
     rcfg.costs.commission_bps = args.commission_bps
     rcfg.costs.slippage_bps = args.slippage_bps
     rcfg.costs.maker_bps = args.maker_bps
+
+    minutes = getattr(res, "minutes", None)
+    source = str((getattr(res, "manifest", {}) or {}).get("source", ""))
+    if minutes and not source.startswith("synthetic") and args.calibrate_costs:
+        costs, info = venues.calibrate_costs(minutes, rcfg.costs)
+        info["symbol"] = getattr(args, "symbol", None) or (
+            venues.symbol_from_path(args.feed or args.csv or "")
+            if (args.feed or args.csv) else None)
+        rcfg.costs = costs
+        rcfg.cost_calibration = info
     return rcfg
 
 
@@ -261,7 +284,7 @@ def cmd_backtest(args: argparse.Namespace) -> int:
     curves = res.stats.get("cohort_curves", {})
     scfg = S.SignalConfig(min_edge_score=args.min_score, cooldown_bars=args.cooldown,
                           entry_timing=args.entry_timing)
-    rcfg = _risk_config(args)
+    rcfg = _risk_config(args, res)
     xcfg = ExitConfig(stop_mode=args.stop_mode,
                       stop_sigma_mult=args.stop_sigma)
     bcfg = BT.BacktestConfig(use_intra_bar_path=not args.no_intrabar,
@@ -291,6 +314,17 @@ def _print_backtest(r: Any, res: Any, label: str = "strategy") -> None:
     print(f"  config hash    {r.manifest['config_hash']}   "
           f"entry={r.manifest['entry_mode']}  intra_bar={r.manifest['intra_bar_path']}  "
           f"adverse_first={r.manifest['adverse_first']}")
+    cal = r.manifest.get("cost_calibration") or {}
+    if cal:
+        adv = cal.get("adv_notional")
+        print(f"  costs measured adv={('%.4g' % adv) if adv else '—'}  "
+              f"tick={cal.get('tick_size')}  "
+              f"slippage={r.manifest['costs']['slippage_bps']} bp"
+              + ("  [tick raised the floor]" if cal.get("slippage_raised_by_tick") else "")
+              + f"   assumed: {', '.join(cal.get('assumed', []))}")
+    elif (r.manifest.get("costs") or {}).get("adv_notional") == 2.0e8:
+        print("  costs assumed   adv=2e8 (placeholder) — pass a real --feed to "
+              "measure depth and tick from the data")
     print(f"  entry funnel   {r.entry_funnel.get('signals_emitted', 0)} signals -> "
           f"{r.entry_funnel.get('positions_opened', 0)} positions "
           f"(fill rate {_pct(r.entry_funnel.get('fill_rate', 0))})")
@@ -378,7 +412,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
     curves = res.stats.get("cohort_curves", {})
     scfg = S.SignalConfig(min_edge_score=args.min_score, cooldown_bars=args.cooldown,
                           entry_timing=args.entry_timing)
-    rcfg = _risk_config(args)
+    rcfg = _risk_config(args, res)
     xcfg = ExitConfig(stop_mode=args.stop_mode, stop_sigma_mult=args.stop_sigma)
 
     strat = BT.run_backtest(res, signal_cfg=scfg, risk_cfg=rcfg, exit_cfg=xcfg,
@@ -423,6 +457,11 @@ def cmd_sweep(args: argparse.Namespace) -> int:
     from engine.resample import periods_per_year
     ppy = periods_per_year(res.settings.timeframe)
 
+    # The risk config was previously not passed at all, so every sweep row ran
+    # on the RiskConfig defaults while `compare` used the CLI flags — including
+    # the cost model.  The sweep is a headline result, so that was not a
+    # cosmetic difference.
+    rcfg = _risk_config(args, res)
     param = args.param
     grid = [float(x) for x in args.grid.split(",")]
     returns_by_cfg: dict[str, Sequence[float]] = {}
@@ -444,7 +483,8 @@ def cmd_sweep(args: argparse.Namespace) -> int:
         else:
             raise SystemExit(f"unsupported sweep parameter: {param}")
         label = f"{param}={value:g}"
-        r = BT.run_backtest(res, signal_cfg=scfg, exit_cfg=xcfg, cohort_curves=curves)
+        r = BT.run_backtest(res, signal_cfg=scfg, risk_cfg=rcfg, exit_cfg=xcfg,
+                            cohort_curves=curves)
         eq = [p.equity for p in r.equity_curve]
         rets = [(eq[k] - eq[k - 1]) / eq[k - 1] if eq[k - 1] else 0.0
                 for k in range(1, len(eq))]
@@ -516,6 +556,7 @@ def cmd_ablation(args: argparse.Namespace) -> int:
     res = _build(args, cohort=True)
     _print_manifest(res)
     curves = res.stats.get("cohort_curves", {})
+    rcfg = _risk_config(args, res)
 
     def run_one(name: str, disabled: bool) -> dict[str, Any]:
         kw: dict[str, Any] = {"min_edge_score": args.min_score,
@@ -529,7 +570,10 @@ def cmd_ablation(args: argparse.Namespace) -> int:
             if flag:
                 kw[flag] = False
         scfg = S.SignalConfig(**kw)
-        r = BT.run_backtest(res, signal_cfg=scfg, cohort_curves=curves)
+        r = BT.run_backtest(res, signal_cfg=scfg, risk_cfg=rcfg,
+                            exit_cfg=ExitConfig(stop_mode=args.stop_mode,
+                                                stop_sigma_mult=args.stop_sigma),
+                            cohort_curves=curves)
         return {"n_trades": len(r.trades),
                 "expectancy_r": r.metrics["trades"].get("expectancy_r", 0.0),
                 "sharpe": r.metrics["risk_adjusted"]["sharpe"],
@@ -683,6 +727,13 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--commission-bps", type=float, default=4.0)
     g.add_argument("--maker-bps", type=float, default=1.0)
     g.add_argument("--slippage-bps", type=float, default=2.0)
+    g.add_argument("--no-calibrate-costs", dest="calibrate_costs",
+                   action="store_false", default=True,
+                   help="keep the declared cost placeholders instead of measuring "
+                        "ADV and the tick-implied spread floor from the data")
+    g.add_argument("--symbol", default=None,
+                   help="label the instrument in the manifest (inferred from the "
+                        "csv filename when omitted)")
 
     g = p.add_argument_group("accuracy switches")
     g.add_argument("--no-intrabar", action="store_true",

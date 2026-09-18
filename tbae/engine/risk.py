@@ -149,6 +149,15 @@ class RiskConfig:
     allow_short: bool = True
     costs: CostConfig = field(default_factory=CostConfig)
 
+    #: What :func:`engine.venues.calibrate_costs` measured from the data and
+    #: substituted into ``costs`` (tick size, ADV, and whether the tick raised
+    #: the slippage floor).  Empty when costs were declared outright.  It lives
+    #: here rather than beside the report so that it is hashed into
+    #: ``config_hash`` and printed in every run manifest: a number produced with
+    #: measured impact must not be comparable to one produced with the
+    #: placeholder without saying so.
+    cost_calibration: dict = field(default_factory=dict)
+
     def validate(self) -> "RiskConfig":
         if self.initial_equity <= 0:
             raise ValueError("initial_equity must be > 0")

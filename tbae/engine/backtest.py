@@ -1016,6 +1016,14 @@ class Backtester:
             "target_exits_are_maker": self.bcfg.target_exits_are_maker,
             "close_open_at_end": self.bcfg.close_open_at_end,
             "periods_per_year": self.rcfg.periods_per_year,
+            # Costs are part of the result, not an input footnote: the whole
+            # strategy sits near break-even, so "which fee assumption produced
+            # this" is the difference between a finding and an artefact.  Both
+            # the numbers used and what was measured vs declared are recorded.
+            "costs": {f: getattr(self.rcfg.costs, f)
+                      for f in ("commission_bps", "maker_bps", "slippage_bps",
+                                "impact_coeff", "adv_notional")},
+            "cost_calibration": dict(self.rcfg.cost_calibration or {}),
             "warnings": list(warnings),
         }
 
