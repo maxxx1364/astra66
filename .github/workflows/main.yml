@@ -231,7 +231,7 @@ jobs:
           DAY = 86_400_000
           symbols = [s.strip().upper() for s in os.environ.get("SYMBOLS", "BTCUSDT").split(",") if s.strip()]
           days = int(os.environ.get("DAYS", "90"))
-          end = int(time.time() // 60 * 60 * 1000)
+          end = int(time.time() // 86400 * 86400 * 1000)
           start = end - days * DAY
           bases = ["https://api.binance.com", "https://data-api.binance.vision"]
 
