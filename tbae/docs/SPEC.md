@@ -4,7 +4,7 @@
 > و کدام اینواریانت‌ها با تست قفل شده‌اند. برای یافته‌های پژوهشی به
 > [`RESEARCH.md`](RESEARCH.md) بروید.
 
-نسخهٔ موتور: `0.2.0` — زبان: Python 3.11+ — تست: `592` (هشت فایل)
+نسخهٔ موتور: `0.2.0` — زبان: Python 3.11+ — تست: `617` (نه فایل)
 
 ---
 
@@ -220,7 +220,7 @@ cd tbae
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 
-python3 -m pytest                                  # ۵۹۲ تست
+python3 -m pytest                                  # ۶۱۷ تست
 python3 -m app.cli backtest --tf 15 --days 45      # بک‌تست کامل + هشدارها
 python3 -m app.cli compare  --tf 15 --days 45      # استراتژی در برابر دو کنترل
 python3 -m app.cli sweep    --tf 15 --days 45      # جاروب آستانه/هندسه

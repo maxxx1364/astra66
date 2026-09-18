@@ -30,10 +30,10 @@ on:
     inputs:
       symbols:
         description: "Comma-separated symbols"
-        default: "BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT"
+        default: "BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT"
       days:
         description: "Days of 1m history to download"
-        default: "365"
+        default: "1095"
       tf:
         description: "Timeframe (minutes)"
         default: "60"
@@ -54,15 +54,21 @@ permissions:
 
 env:
   # push/schedule events carry no inputs, so these fallbacks decide what those
-  # runs study.  They match the workflow_dispatch defaults (365d / 60m / 90d) so
-  # that a run triggered by editing this file publishes the SAME configuration as
-  # a manual run, instead of silently falling back to the old 90d / 15m study and
-  # overwriting LATEST.md with it.  Symbols stay single for push/schedule: those
-  # runs are a regression check, not the study itself.
-  SYMBOLS: ${{ github.event.inputs.symbols || 'BTCUSDT' }}
-  # PR events keep the download small: a PR check proves the path works on real
-  # data, it does not need to re-run the whole study.
-  DAYS: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.days || '365') }}
+  # runs study.  They match the workflow_dispatch defaults (1095d / 60m / 90d)
+  # so that a run triggered by editing this file publishes the SAME
+  # configuration as a manual run, instead of silently falling back to an older
+  # study and overwriting LATEST.md with it.
+  #
+  # Symbols: a PR or push run is a regression check — one symbol, short window,
+  # so that editing this file cannot spend forty minutes downloading.  The
+  # scheduled and manual runs are the study itself.
+  SYMBOLS: ${{ (github.event_name == 'pull_request' || github.event_name == 'push') && 'BTCUSDT' || (github.event.inputs.symbols || 'BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT') }}
+  # Three years is the point: at ~107 trades per symbol-year the study sat at
+  # n=427 against the ~569 needed for 80% power, and adding symbols to a single
+  # year buys less than adding regimes.  The store makes it affordable — the
+  # vision archive serves one ZIP per month, and --append means only the first
+  # run pays for the history.
+  DAYS: ${{ github.event_name == 'pull_request' && '14' || (github.event_name == 'push' && '90' || (github.event.inputs.days || '1095')) }}
   TF: ${{ github.event.inputs.tf || '60' }}
   WINDOW: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.window || '90') }}
   SEEDS_SYNTH: ${{ github.event_name == 'pull_request' && '4' || '20' }}
@@ -226,96 +232,125 @@ jobs:
           PY
         working-directory: tbae
 
+      # ---------------------------------------------------------------- #
+      # The store: restore -> top up -> save.
+      #
+      # A three-year 1-minute history per symbol is ~1.6M bars.  Downloading
+      # that from scratch on every run costs ~1,600 REST requests per symbol
+      # and dominated the job.  Two things fix it:
+      #
+      #   * the vision archive serves one ZIP per month with a published
+      #     SHA256, so the same history is ~36 requests instead of ~1,600;
+      #   * the store survives between runs (Actions cache, seeded on a cold
+      #     cache from the `klines` release), and `--append` fetches only the
+      #     contiguous block after the last bar already on disk.
+      #
+      # So the first run of a symbol costs years of requests and every run
+      # after that costs days.
+      # ---------------------------------------------------------------- #
+      # Cache keys may not contain commas, so the symbol set is joined with
+      # dashes.  The window length is part of the key too: a 14-day PR check
+      # must not restore a three-year store and silently study the wrong range.
+      - name: Compute the store key
+        id: storekey
+        run: |
+          key="klines-v1-$(echo "$SYMBOLS" | tr ',' '-' | tr -d ' ')-${DAYS}d"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          echo "store key: $key"
+
+      - name: Restore the kline store
+        id: store
+        uses: actions/cache/restore@v4
+        with:
+          # Stamped with the run id because cache entries are immutable: each
+          # run writes a NEW entry and restores the newest one via
+          # restore-keys.  Unused entries are evicted after 7 days, which
+          # bounds total growth at roughly a week of runs.
+          path: tbae/data/binance
+          key: ${{ steps.storekey.outputs.key }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ steps.storekey.outputs.key }}-
+
+      - name: Seed the store from the klines release
+        if: steps.store.outputs.cache-hit != 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Cold cache (first run, or after eviction): pull the published
+          # snapshot instead of rebuilding years of history.  This is the
+          # other half of the hybrid: the bulk lives in a release, and CI
+          # only ever tops it up.
+          mkdir -p tbae/data/binance
+          if ! gh release view klines --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "no 'klines' release yet — the store will be built from scratch"
+            exit 0
+          fi
+          gh release download klines --repo "$GITHUB_REPOSITORY" \
+            --dir tbae/data/binance --pattern "*_1m.csv.gz" || true
+          ls -lh tbae/data/binance || true
+
       # Klines are public market data: no API key.  If BINANCE_API_KEY is set as
       # a repository secret it is picked up automatically (higher rate limit).
-      # api.binance.com answers HTTP 451 in some jurisdictions, so the mirror is
-      # tried second rather than the run simply failing.
-      - name: Download klines
+      - name: Top up the kline store
         id: download
         continue-on-error: true
         run: |
+          # --append is what keeps this cheap: only the block after the last
+          # stored bar is fetched, so a warm cache makes this a no-op.
+          if ! python scripts/fetch_binance.py \
+                --symbols "$SYMBOLS" --interval 1m --days "$DAYS" \
+                --source auto --store --append --gzip --mirror \
+                --out-dir data/binance --json ../reports/fetch_report.json; then
+            echo "vision archive failed — falling back to REST paging on the mirror"
+            python scripts/fetch_binance.py \
+                --symbols "$SYMBOLS" --interval 1m --days "$DAYS" \
+                --source rest --store --append --gzip --mirror \
+                --out-dir data/binance --json ../reports/fetch_report.json
+          fi
+          ls -lh data/binance
+        working-directory: tbae
+
+      - name: Locate each symbol's store
+        id: locate
+        run: |
           python - <<'PY'
-          import datetime as dt, json, os, sys, time
-
-          sys.path.insert(0, ".")
-          from engine.feeds import BinanceRestFeed, write_minutes_csv
-
-          DAY = 86_400_000
-          symbols = [s.strip().upper() for s in os.environ.get("SYMBOLS", "BTCUSDT").split(",") if s.strip()]
-          days = int(os.environ.get("DAYS", "90"))
-          # Pin the window to UTC midnight instead of "now".  With `end = now`
-          # every run analysed a slightly different set of bars, which is why the
-          # random-entry control moved between runs (159 -> 136 -> 174 trades)
-          # even though it is seeded (app/cli.py passes --seed, default 20260913,
-          # straight into BacktestConfig(random_seed=...)).  The seed was never
-          # the problem; the moving window was.  Now two runs on the same UTC day
-          # see identical data, so published reports are directly comparable.
-          # NB: time.time() is SECONDS — floor in seconds, then convert to ms.
-          # (`time.time() // 86_400_000` silently yields 1970-01-21.)
-          end = int(time.time() // 86400 * 86400 * 1000)
-          start = end - days * DAY
-          bases = ["https://api.binance.com", "https://data-api.binance.vision"]
-
-          def iso(ms):
-              return dt.datetime.fromtimestamp(ms / 1000.0, dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-          os.makedirs("../reports", exist_ok=True)
-          os.makedirs("data/binance", exist_ok=True)
-          qc_all, failed = {}, []
-
-          for sym in symbols:
-              bars, used = None, None
-              for base in bases:
-                  t0 = time.time()
-                  try:
-                      got = BinanceRestFeed(symbol=sym, interval="1m", base_url=base).load(
-                          start_ms=start, end_ms=end)
-                  except Exception as e:
-                      print(f"{sym}: {base} -> {type(e).__name__}: {str(e)[:200]}", flush=True)
-                      continue
-                  if got:
-                      bars, used = got, base
-                      print(f"{sym}: {len(got):,} minutes via {base} in {time.time()-t0:.1f}s", flush=True)
-                      break
-                  print(f"{sym}: {base} -> 0 bars", flush=True)
-              if not bars:
-                  failed.append(sym)
+          import glob, json, os
+          paths = {}
+          for sym in os.environ["SYMBOLS"].split(","):
+              sym = sym.strip().upper()
+              if not sym:
                   continue
-
-              path = f"data/binance/{sym}_1m.csv"
-              write_minutes_csv(bars, path)
-              ts = [b.ts for b in bars]
-              span = (ts[-1] - ts[0]) // 60_000 + 1
-              qc = {
-                  "symbol": sym, "source": used, "path": path,
-                  "bytes": os.path.getsize(path), "bars": len(bars),
-                  "first": iso(ts[0]), "last": iso(ts[-1]),
-                  "requested_days": days,
-                  "covered_days": round((ts[-1] - ts[0]) / DAY, 2),
-                  "span_minutes": span,
-                  "missing_minutes": span - len(set(ts)),
-              }
-              qc["missing_pct"] = round(100.0 * qc["missing_minutes"] / span, 4) if span else 0.0
-              qc_all[sym] = qc
-              print(f"{sym}: {qc['first']} .. {qc['last']}  missing {qc['missing_minutes']} "
-                    f"minute(s)  {qc['bytes']/1e6:.2f} MB", flush=True)
-
-          with open("../reports/data_qc.json", "w") as fh:
-              json.dump(qc_all, fh, indent=2)
-          if failed:
-              raise SystemExit(f"no data downloaded for: {', '.join(failed)}")
+              hits = sorted(glob.glob(f"data/binance/{sym}_1m.csv*"))
+              if not hits:
+                  print(f"::warning::no store found for {sym}")
+                  continue
+              paths[sym] = hits[-1]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"paths={json.dumps(paths)}\n")
+          print(json.dumps(paths, indent=2))
           PY
         working-directory: tbae
 
-      # Only modules that already exist on main are used here, so this cannot
-      # break because a helper script was not committed.
+      # Every module used here is committed and unit-tested, so this cannot
+      # break because a helper script was left uncommitted.  Costs are measured
+      # from each symbol's own candles (ADV and the tick-implied spread floor)
+      # rather than taken from the shared placeholders, so the four symbols are
+      # compared on their own liquidity instead of a single assumed one.
       - name: Research on real data
         continue-on-error: true
         run: |
           status=0
+          python - <<'PY' > /tmp/paths.sh
+          import json, os
+          paths = json.loads(os.environ.get("PATHS") or "{}")
+          for sym, path in paths.items():
+              print(f'PATH_{sym}="{path}"')
+          PY
+          . /tmp/paths.sh
           for SYM in $(echo "$SYMBOLS" | tr ',' ' '); do
-            CSV="data/binance/${SYM}_1m.csv"
-            if [ ! -s "$CSV" ]; then echo "skip $SYM (no data file)"; continue; fi
+            eval "CSV=\$PATH_${SYM}"
+            if [ -z "$CSV" ] || [ ! -s "$CSV" ]; then echo "skip $SYM (no data file)"; continue; fi
             echo "=== $SYM: compare vs controls ==="
             python -m app.cli compare --feed "csv:$CSV" --tf "$TF" \
               --json "../reports/real_compare_${SYM}.json" || status=1
@@ -329,6 +364,18 @@ jobs:
           done
           exit $status
         working-directory: tbae
+        env:
+          PATHS: ${{ steps.locate.outputs.paths }}
+
+      # Written back every run, not only on success: the expensive part is the
+      # download, and a study that failed downstream has still already paid for
+      # it.  Skipping the save on failure would make the next run re-download.
+      - name: Save the kline store
+        if: always() && steps.download.outcome != 'skipped'
+        uses: actions/cache/save@v4
+        with:
+          path: tbae/data/binance
+          key: ${{ steps.storekey.outputs.key }}-${{ github.run_id }}
 
       - name: Job summary (always, and always unambiguous)
         if: always()
@@ -393,6 +440,16 @@ jobs:
                             f"{q.get('first')} .. {q.get('last')} · "
                             f"missing {q.get('missing_minutes')} min ({q.get('missing_pct')}%) · "
                             f"source `{q.get('source')}`", ""]
+                  man = strat.get("manifest") or {}
+                  cm = man.get("costs") or {}
+                  ccal = man.get("cost_calibration") or {}
+                  if cm:
+                      adv = ccal.get("adv_notional")
+                      L += [f"Costs: fee {num(cm.get('commission_bps'))}/{num(cm.get('maker_bps'))} bp "
+                            f"(taker/maker) · slippage {num(cm.get('slippage_bps'))} bp · "
+                            f"ADV {('%.3g' % adv) if adv else '—'} "
+                            f"({'measured' if 'adv_notional' in (ccal.get('measured') or []) else 'PLACEHOLDER'})"
+                            + (f" · tick {ccal.get('tick_size')}" if ccal.get("tick_size") else ""), ""]
                   comp = d.get("comparison") or {}
                   L += ["| configuration | trades | return% | Sharpe | maxDD% | win% | E[R] | PF |",
                         "|---|---:|---:|---:|---:|---:|---:|---:|"]

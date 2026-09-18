@@ -1,0 +1,230 @@
+name: data-store
+
+# The other half of the research pipeline's data strategy.
+#
+# `backtest.yml` keeps a kline store in the Actions cache and tops it up with
+# `--append`, so a routine run costs days of requests instead of years.  That
+# cache is the right place for the *tail*, and the wrong place for the bulk:
+# an entry is immutable, and it is evicted after seven days of disuse, so
+# losing it once means the next run quietly rebuilds three years.
+#
+# So the bulk lives here instead.  This job builds the multi-year store from
+# the vision archive and attaches it to the long-lived `klines` release, which
+# is free, permanent and readable by any run without a token dance.  A cold
+# cache in `backtest.yml` seeds itself from that release before appending.
+#
+# Run it when the universe changes (a new symbol, a longer window) or on the
+# monthly schedule to keep the snapshot from drifting too far behind.  It is
+# deliberately not part of every research run: this is the expensive path,
+# taken rarely on purpose, so that the routine path stays cheap.
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: "Comma-separated symbols to build"
+        default: "BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT"
+      start:
+        description: "First day of history (YYYY-MM-DD). Blank = a rolling 3 years."
+        default: ""
+      years:
+        description: "Years of history when start is blank"
+        default: "3"
+      end:
+        description: "Last day of history (YYYY-MM-DD, inclusive)"
+        default: ""
+  schedule:
+    - cron: "23 4 1 * *"          # 1st of the month, 04:23 UTC
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-store
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build and publish the kline store
+    runs-on: ubuntu-latest
+    # Four symbols x three years of 1-minute bars is ~1.6M bars and roughly
+    # 19 MB gzipped per symbol.  Vision is one ZIP per month (~36 requests
+    # per symbol), so the request count is not the constraint — the archive
+    # mirror's throughput is.  Three hours leaves room for a slow day.
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tbae/requirements.txt
+
+      - name: Install
+        run: pip install -r requirements.txt
+        working-directory: tbae
+
+      - name: Prepare output directories
+        run: mkdir -p ../reports data/binance
+        working-directory: tbae
+
+      # Seeding from the existing release turns a rebuild into an append.  The
+      # monthly run then costs a month of downloads rather than six years.
+      - name: Seed from the existing release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+        run: |
+          if ! gh release view klines --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "no 'klines' release yet — building from scratch"
+            exit 0
+          fi
+          gh release download klines --repo "$GITHUB_REPOSITORY" \
+            --dir data/binance --pattern "*_1m.csv.gz" || true
+          ls -lh data/binance || true
+        working-directory: tbae
+
+      - name: Build the store
+        id: build
+        run: |
+          # Default end = yesterday UTC.  Today's archive is not published
+          # until the day closes, and asking for it would leave a store that
+          # silently stops a day early.
+          # Default to a rolling three years ending yesterday.  The study in
+          # backtest.yml asks for 1095 days, so this matches it exactly; a
+          # deeper history would be built, cached, and then trimmed away.
+          END="${{ github.event.inputs.end }}"
+          if [ -z "$END" ]; then
+            END=$(date -u -d "yesterday" +%Y-%m-%d)
+          fi
+          START="${{ github.event.inputs.start }}"
+          if [ -z "$START" ]; then
+            START=$(date -u -d "$END -${{ github.event.inputs.years || '3' }} years +1 day" +%Y-%m-%d)
+          fi
+          echo "window: $START .. $END"
+          python scripts/fetch_binance.py \
+            --symbols "${{ github.event.inputs.symbols || 'BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT' }}" \
+            --interval 1m \
+            --start "$START" --end "$END" \
+            --source vision --store --append --gzip --mirror \
+            --out-dir data/binance --json ../reports/fetch_report.json
+          ls -lh data/binance
+        working-directory: tbae
+
+      # A store is only worth publishing if it is actually complete.  A symbol
+      # with holes would be downloaded by every later run and trusted by every
+      # later backtest, so the QC gate is the point of this job.
+      - name: Verify the store before publishing
+        id: verify
+        run: |
+          python - <<'PY'
+          import glob, json, os, sys
+
+          sys.path.insert(0, ".")
+          from engine.feeds import CsvFeed
+          from engine.resample import validate_minutes
+
+          symbols = [s.strip().upper()
+                     for s in os.environ["SYMBOLS"].split(",") if s.strip()]
+          report, failed = {}, []
+          for sym in symbols:
+              hits = sorted(glob.glob(f"data/binance/{sym}_1m.csv*"))
+              if not hits:
+                  failed.append(f"{sym}: no store produced")
+                  continue
+              path = hits[-1]
+              bars = CsvFeed(path).load()
+              ts = [b.ts for b in bars]
+              span = (ts[-1] - ts[0]) // 60_000 + 1
+              gaps = span - len(set(ts))
+              try:
+                  validate_minutes(bars)
+                  invalid = None
+              except ValueError as exc:
+                  invalid = str(exc)
+              report[sym] = {
+                  "path": path, "bars": len(bars),
+                  "first": ts[0], "last": ts[-1],
+                  "span_minutes": span, "missing_minutes": gaps,
+                  "missing_pct": round(100.0 * gaps / span, 4) if span else 0.0,
+                  "bytes": os.path.getsize(path), "invalid": invalid,
+              }
+              if gaps:
+                  failed.append(f"{sym}: {gaps:,} missing minutes")
+              if invalid:
+                  failed.append(f"{sym}: {invalid}")
+
+          with open("../reports/store_verify.json", "w") as fh:
+              json.dump(report, fh, indent=2, default=str)
+          print(json.dumps(report, indent=2, default=str))
+          if failed:
+              print("::error::store rejected: " + "; ".join(failed))
+              sys.exit(1)
+          PY
+        working-directory: tbae
+        env:
+          SYMBOLS: ${{ github.event.inputs.symbols || 'BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT' }}
+
+      - name: Publish to the klines release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          stamp=$(date -u +%Y-%m-%dT%H%M%SZ)
+          # Upload first, then create-or-edit: `gh release create` fails if the
+          # tag already exists, and `gh release upload` needs it to exist.  The
+          # release is a mutable snapshot, not a versioned artefact — its job
+          # is to hold "the newest good store", and older copies are not
+          # interesting once superseded.
+          if gh release view klines --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload klines data/binance/*_1m.csv.gz \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create klines data/binance/*_1m.csv.gz \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Kline store (${stamp})" \
+              --notes "1-minute Binance klines, gzipped CSV, built by \`data-store.yml\`.
+
+          Consumed by \`backtest.yml\` when its cache is cold, and topped up with
+          \`scripts/fetch_binance.py --append\`. Built from the Binance vision
+          public archive; no API key is involved."
+          fi
+          gh release view klines --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[] | "\(.name)\t\(.size)"'
+        working-directory: tbae
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Kline store"
+            echo
+            echo "Symbols: \`${SYMBOLS}\` · window: \`${START}\` .. built through yesterday UTC"
+            echo
+            if [ -f ../reports/store_verify.json ]; then
+              echo "| symbol | bars | missing | size |"
+              echo "|---|---:|---:|---:|"
+              python - <<'PY'
+          import json
+          d = json.load(open("../reports/store_verify.json"))
+          for sym, v in d.items():
+              print(f"| {sym} | {v['bars']:,} | {v['missing_pct']}% | {v['bytes']/1e6:.1f} MB |")
+          PY
+            else
+              echo "⚠️ the store was not verified — nothing was published"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+        working-directory: tbae
+        env:
+          SYMBOLS: ${{ github.event.inputs.symbols || 'BTCUSDT,ETHUSDT,XRPUSDT,SOLUSDT' }}
+          START: ${{ github.event.inputs.start || 'rolling 3 years' }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: data-store-reports
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 90
