@@ -1,0 +1,148 @@
+{
+  "baseline": {
+    "n_trades": 379,
+    "expectancy_r": -0.04469668163983486,
+    "sharpe": -0.7835435234236264,
+    "max_dd_pct": 18.13783277454321,
+    "return_pct": -13.292176339410128,
+    "win_rate": 0.42744063324538256
+  },
+  "filters": {
+    "trend": {
+      "n_trades": 619,
+      "delta_n_trades": 240,
+      "delta_expectancy_r": 0.004777344243735694,
+      "delta_sharpe": 0.06565414951291115,
+      "delta_return_pct": -2.582242986480429,
+      "delta_max_dd_pct": -0.09514064536142897,
+      "verdict": "review",
+      "detail": {
+        "n_trades": 619,
+        "expectancy_r": -0.03991933739609917,
+        "sharpe": -0.7178893739107153,
+        "max_dd_pct": 18.04269212918178,
+        "return_pct": -15.874419325890557,
+        "win_rate": 0.4297253634894992
+      }
+    },
+    "volatility": {
+      "n_trades": 358,
+      "delta_n_trades": -21,
+      "delta_expectancy_r": -0.015252345697146556,
+      "delta_sharpe": -0.08263823894634659,
+      "delta_return_pct": -0.5809939365094046,
+      "delta_max_dd_pct": -0.04424630173705779,
+      "verdict": "keep",
+      "detail": {
+        "n_trades": 358,
+        "expectancy_r": -0.05994902733698142,
+        "sharpe": -0.866181762369973,
+        "max_dd_pct": 18.09358647280615,
+        "return_pct": -13.873170275919533,
+        "win_rate": 0.4273743016759777
+      }
+    },
+    "volume": {
+      "n_trades": 398,
+      "delta_n_trades": 19,
+      "delta_expectancy_r": 0.00238355192553015,
+      "delta_sharpe": 0.021676316511701654,
+      "delta_return_pct": 0.035823506017212736,
+      "delta_max_dd_pct": -0.06362204646290692,
+      "verdict": "review",
+      "detail": {
+        "n_trades": 398,
+        "expectancy_r": -0.04231312971430471,
+        "sharpe": -0.7618672069119248,
+        "max_dd_pct": 18.074210728080303,
+        "return_pct": -13.256352833392915,
+        "win_rate": 0.4271356783919598
+      }
+    },
+    "structure": {
+      "n_trades": 351,
+      "delta_n_trades": -28,
+      "delta_expectancy_r": -0.0036674732798006662,
+      "delta_sharpe": -0.02218978159695506,
+      "delta_return_pct": 0.21094175028520112,
+      "delta_max_dd_pct": -0.13025761452954399,
+      "verdict": "review",
+      "detail": {
+        "n_trades": 351,
+        "expectancy_r": -0.04836415491963553,
+        "sharpe": -0.8057333050205815,
+        "max_dd_pct": 18.007575160013666,
+        "return_pct": -13.081234589124927,
+        "win_rate": 0.42735042735042733
+      }
+    },
+    "momentum": {
+      "n_trades": 348,
+      "delta_n_trades": -31,
+      "delta_expectancy_r": -0.005958813104460121,
+      "delta_sharpe": -0.0470589410222102,
+      "delta_return_pct": -0.16292070214450582,
+      "delta_max_dd_pct": 0.18736662456290887,
+      "verdict": "review",
+      "detail": {
+        "n_trades": 348,
+        "expectancy_r": -0.05065549474429498,
+        "sharpe": -0.8306024644458366,
+        "max_dd_pct": 18.32519939910612,
+        "return_pct": -13.455097041554634,
+        "win_rate": 0.4281609195402299
+      }
+    },
+    "extension": {
+      "n_trades": 360,
+      "delta_n_trades": -19,
+      "delta_expectancy_r": -0.005681524158924513,
+      "delta_sharpe": -0.04255764771105952,
+      "delta_return_pct": -0.28403681603325914,
+      "delta_max_dd_pct": 0.16813233727133436,
+      "verdict": "review",
+      "detail": {
+        "n_trades": 360,
+        "expectancy_r": -0.05037820579875937,
+        "sharpe": -0.826101171134686,
+        "max_dd_pct": 18.305965111814544,
+        "return_pct": -13.576213155443387,
+        "win_rate": 0.425
+      }
+    },
+    "timing": {
+      "n_trades": 456,
+      "delta_n_trades": 77,
+      "delta_expectancy_r": 0.0035663987768503116,
+      "delta_sharpe": 0.0696985427058664,
+      "delta_return_pct": -0.252428995781246,
+      "delta_max_dd_pct": 0.14820404280197153,
+      "verdict": "review",
+      "detail": {
+        "n_trades": 456,
+        "expectancy_r": -0.04113028286298455,
+        "sharpe": -0.71384498071776,
+        "max_dd_pct": 18.28603681734518,
+        "return_pct": -13.544605335191374,
+        "win_rate": 0.43201754385964913
+      }
+    },
+    "quality": {
+      "n_trades": 400,
+      "delta_n_trades": 21,
+      "delta_expectancy_r": 0.001878649432138585,
+      "delta_sharpe": 0.0182931221753464,
+      "delta_return_pct": -0.08076818121393536,
+      "delta_max_dd_pct": 0.14491891979486127,
+      "verdict": "review",
+      "detail": {
+        "n_trades": 400,
+        "expectancy_r": -0.042818032207696276,
+        "sharpe": -0.76525040124828,
+        "max_dd_pct": 18.28275169433807,
+        "return_pct": -13.372944520624063,
+        "win_rate": 0.4275
+      }
+    }
+  }
+}
