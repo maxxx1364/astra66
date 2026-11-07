@@ -1,0 +1,34 @@
+### runner clock: Sat Nov  7 10:40:18 UTC 2026
+### window: 2025-05-02 .. 2026-10-31
+
+### fetch_binance.py
+[BTCUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+Traceback (most recent call last):
+  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 579, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 536, in main
+    raw = fetch_vision(sym, a.interval, start_ms_sym, end_ms_sym,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 254, in fetch_vision
+    out, _ = _grab([f"{y:04d}-{m:02d}" for y, m in _months(start_ms, end_ms)],
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 244, in _grab
+    bars = parse_kline_zip(blob, name=p)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 198, in parse_kline_zip
+    return CsvFeed().load_fileobj(text)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/astra66/astra66/tbae/engine/feeds.py", line 432, in load_fileobj
+    ts = _parse_ts(col(r, i_ts))
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/astra66/astra66/tbae/engine/feeds.py", line 343, in _parse_ts
+    raise ValueError(f"unrecognised timestamp format: {raw!r}")
+ValueError: unrecognised timestamp format: '1746057600000000'
+### exit=1
+
+### data/binance
+total 0
+
+### fetch_report.json
+cat: ../reports/fetch_report.json: No such file or directory
