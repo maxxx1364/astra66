@@ -113,21 +113,43 @@ jobs:
       # One ZIP per symbol-month.  24 symbols x 18 months = 432 requests, which
       # is the whole point of using vision instead of REST paging (~1600 per
       # symbol for the same history).
+      #
+      # Everything below is captured to a file and committed, because the
+      # research sandbox has no route to results-receiver.actions.githubusercontent.com
+      # or to the artifact blob store — a job log cannot be read back from it.
       - name: Download the universe
+        id: download
+        continue-on-error: true
         run: |
-          python scripts/fetch_binance.py \
-            --symbols "${{ github.event.inputs.symbols || 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT' }}" \
-            --interval 1m \
-            --start "${{ steps.window.outputs.start }}" \
-            --end   "${{ steps.window.outputs.end }}" \
-            --source vision --store --gzip --mirror \
-            --out-dir data/binance \
-            --json ../reports/fetch_report.json
-          ls -lh data/binance | tail -30
+          set +e
+          {
+            echo "### runner clock: $(date -u)"
+            echo "### window: ${{ steps.window.outputs.start }} .. ${{ steps.window.outputs.end }}"
+            echo
+            echo "### fetch_binance.py"
+            python scripts/fetch_binance.py \
+              --symbols "${{ github.event.inputs.symbols || 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT' }}" \
+              --interval 1m \
+              --start "${{ steps.window.outputs.start }}" \
+              --end   "${{ steps.window.outputs.end }}" \
+              --source vision --store --gzip --mirror \
+              --out-dir data/binance \
+              --json ../reports/fetch_report.json 2>&1
+            echo "### exit=$?"
+            echo
+            echo "### data/binance"
+            ls -lh data/binance 2>&1 | tail -40
+            echo
+            echo "### fetch_report.json"
+            cat ../reports/fetch_report.json 2>&1 | head -c 4000
+          } 2>&1 | tee ../reports/01_download.txt
         working-directory: tbae
 
       - name: Run the base-rate study
+        id: study
+        continue-on-error: true
         run: |
+          set +e
           python scripts/compression_study.py \
             --feeds-dir data/binance \
             --tf "${{ github.event.inputs.tf || '15' }}" \
@@ -136,6 +158,7 @@ jobs:
             --profile \
             --json ../reports/compression_study.json \
             2>&1 | tee ../reports/compression_study.txt
+          echo "### exit=$?"
         working-directory: tbae
 
       - name: Job summary
@@ -156,8 +179,10 @@ jobs:
             echo "> anything if a trailing stop can hold on to a large slice of it."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Committed to *this* branch, not only main: the only channel the
+      # research sandbox can actually read results back through is git.
       - name: Publish the report
-        if: ${{ always() && github.ref == 'refs/heads/main' }}
+        if: always()
         run: |
           set -e
           stamp=$(date -u +%Y-%m-%dT%H%M%SZ)
@@ -165,6 +190,7 @@ jobs:
           cp reports/compression_study.json "tbae/docs/results/compression/${stamp}.json" 2>/dev/null || true
           cp reports/compression_study.txt  "tbae/docs/results/compression/${stamp}.txt"  2>/dev/null || true
           cp reports/compression_study.txt  tbae/docs/results/compression/LATEST.txt      2>/dev/null || true
+          cp reports/01_download.txt        tbae/docs/results/compression/DOWNLOAD.txt    2>/dev/null || true
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tbae/docs/results/compression
@@ -173,7 +199,7 @@ jobs:
             exit 0
           fi
           git commit -m "research: compression base-rate study ${stamp} [skip ci]"
-          git push origin main
+          git push origin HEAD:"${GITHUB_REF#refs/heads/}"
         working-directory: "."
 
       - uses: actions/upload-artifact@v4
