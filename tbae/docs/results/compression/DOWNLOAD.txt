@@ -1,34 +1,173 @@
-### runner clock: Sat Nov  7 10:40:18 UTC 2026
+### runner clock: Sat Nov  7 10:43:42 UTC 2026
 ### window: 2025-05-02 .. 2026-10-31
 
 ### fetch_binance.py
 [BTCUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
-Traceback (most recent call last):
-  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 579, in <module>
-    raise SystemExit(main())
-                     ^^^^^^
-  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 536, in main
-    raw = fetch_vision(sym, a.interval, start_ms_sym, end_ms_sym,
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 254, in fetch_vision
-    out, _ = _grab([f"{y:04d}-{m:02d}" for y, m in _months(start_ms, end_ms)],
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 244, in _grab
-    bars = parse_kline_zip(blob, name=p)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/astra66/astra66/tbae/scripts/fetch_binance.py", line 198, in parse_kline_zip
-    return CsvFeed().load_fileobj(text)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/astra66/astra66/tbae/engine/feeds.py", line 432, in load_fileobj
-    ts = _parse_ts(col(r, i_ts))
-         ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/astra66/astra66/tbae/engine/feeds.py", line 343, in _parse_ts
-    raise ValueError(f"unrecognised timestamp format: {raw!r}")
-ValueError: unrecognised timestamp format: '1746057600000000'
-### exit=1
+  monthly 2025-05:  44,640 bars   2.18 MB  sha256=7f95bf97e3cc
+  monthly 2025-06:  43,200 bars   2.07 MB  sha256=f95f6169e253
+  monthly 2025-07:  44,640 bars   2.14 MB  sha256=3377e023fe25
+  monthly 2025-08:  44,640 bars   2.15 MB  sha256=11da1c7db894
+  monthly 2025-09:  43,200 bars   2.05 MB  sha256=52bb4a4a52af
+  monthly 2025-10:  44,640 bars   2.22 MB  sha256=985d878cacbf
+  monthly 2025-11:  43,200 bars   2.17 MB  sha256=c54159d1216a
+  monthly 2025-12:  44,640 bars   2.15 MB  sha256=7b47647352b0
+  monthly 2026-01:  44,640 bars   2.13 MB  sha256=d28b369da32a
+  monthly 2026-02:  40,320 bars   2.02 MB  sha256=cee2e913ed07
+  monthly 2026-03:  44,640 bars   2.21 MB  sha256=a2c1e689d39a
+  monthly 2026-04:  43,200 bars   2.09 MB  sha256=318afd4f5acf
+  monthly 2026-05:  44,640 bars   2.12 MB  sha256=62983d93c35e
+  monthly 2026-06:  43,200 bars   2.09 MB  sha256=c8e1d5e70b76
+  monthly 2026-07:  44,640 bars   2.11 MB  sha256=3ef15c84353d
+  monthly 2026-08:  44,640 bars   2.08 MB  sha256=acab442e0274
+  monthly 2026-09:  43,200 bars   2.05 MB  sha256=7a021fb5981c
+  monthly 2026-10:  44,640 bars   2.11 MB  sha256=17168f260306
+[BTCUSDT] merged 789,120 bars in 38.6s
+[BTCUSDT] wrote data/binance/BTCUSDT_1m.csv.gz (26.44 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[ETHUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   2.13 MB  sha256=743268912388
+  monthly 2025-06:  43,200 bars   2.03 MB  sha256=eb7641c42f64
+  monthly 2025-07:  44,640 bars   2.13 MB  sha256=b95c721b5282
+  monthly 2025-08:  44,640 bars   2.16 MB  sha256=aaebc0e2baa7
+  monthly 2025-09:  43,200 bars   2.04 MB  sha256=2912831352b3
+  monthly 2025-10:  44,640 bars   2.15 MB  sha256=a384d1bea37e
+  monthly 2025-11:  43,200 bars   2.07 MB  sha256=30b80de8cbbd
+  monthly 2025-12:  44,640 bars   2.08 MB  sha256=57b653e4ff35
+  monthly 2026-01:  44,640 bars   2.07 MB  sha256=cadd060ab73b
+  monthly 2026-02:  40,320 bars   1.92 MB  sha256=1ddb64d08739
+  monthly 2026-03:  44,640 bars   2.09 MB  sha256=5747c9f1f76b
+  monthly 2026-04:  43,200 bars   1.98 MB  sha256=8a2f0a290776
+  monthly 2026-05:  44,640 bars   2.02 MB  sha256=bc0e625d18c0
+  monthly 2026-06:  43,200 bars   2.00 MB  sha256=770fdf44aac0
+  monthly 2026-07:  44,640 bars   2.03 MB  sha256=1ad273218d6c
+  monthly 2026-08:  44,640 bars   2.01 MB  sha256=f2f2fe8da854
+  monthly 2026-09:  43,200 bars   1.99 MB  sha256=827b46043bdc
+  monthly 2026-10:  44,640 bars   2.03 MB  sha256=bcbfb8f896ba
+[ETHUSDT] merged 789,120 bars in 36.7s
+[ETHUSDT] wrote data/binance/ETHUSDT_1m.csv.gz (25.40 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[SOLUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.92 MB  sha256=7fdc3b4c5a74
+  monthly 2025-06:  43,200 bars   1.84 MB  sha256=df0158c33ab9
+  monthly 2025-07:  44,640 bars   1.92 MB  sha256=5b7ef20e0fbc
+  monthly 2025-08:  44,640 bars   1.95 MB  sha256=ace20c6d317f
+  monthly 2025-09:  43,200 bars   1.88 MB  sha256=067ddd8e2e2b
+  monthly 2025-10:  44,640 bars   1.96 MB  sha256=af138c5fae53
+  monthly 2025-11:  43,200 bars   1.87 MB  sha256=5188939b56b5
+  monthly 2025-12:  44,640 bars   1.87 MB  sha256=8ff4ac3d9f34
+  monthly 2026-01:  44,640 bars   1.86 MB  sha256=9d0fbac86d89
+  monthly 2026-02:  40,320 bars   1.71 MB  sha256=acfd300f0eab
+  monthly 2026-03:  44,640 bars   1.85 MB  sha256=b98d056aafa1
+  monthly 2026-04:  43,200 bars   1.75 MB  sha256=259fd7109745
+  monthly 2026-05:  44,640 bars   1.80 MB  sha256=e5be21fb183c
+  monthly 2026-06:  43,200 bars   1.78 MB  sha256=e16536511014
+  monthly 2026-07:  44,640 bars   1.78 MB  sha256=7980195ca8f5
+  monthly 2026-08:  44,640 bars   1.78 MB  sha256=138412edb2c8
+  monthly 2026-09:  43,200 bars   1.79 MB  sha256=c18c258e478a
+  monthly 2026-10:  44,640 bars   1.82 MB  sha256=9e7202163239
+[SOLUSDT] merged 789,120 bars in 36.5s
+[SOLUSDT] wrote data/binance/SOLUSDT_1m.csv.gz (22.42 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[XRPUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.88 MB  sha256=0e17b5a7e1d0
+  monthly 2025-06:  43,200 bars   1.78 MB  sha256=f54e89eb4911
+  monthly 2025-07:  44,640 bars   1.93 MB  sha256=93036a494c26
+  monthly 2025-08:  44,640 bars   1.90 MB  sha256=3525f0f8100e
+  monthly 2025-09:  43,200 bars   1.80 MB  sha256=ccbf9cbff511
+  monthly 2025-10:  44,640 bars   1.89 MB  sha256=62d243fdd90c
+  monthly 2025-11:  43,200 bars   1.83 MB  sha256=057714b02087
+  monthly 2025-12:  44,640 bars   1.81 MB  sha256=1135342ebc45
+  monthly 2026-01:  44,640 bars   1.82 MB  sha256=5e8ad6e007bd
+  monthly 2026-02:  40,320 bars   1.69 MB  sha256=27f418db27fd
+  monthly 2026-03:  44,640 bars   1.80 MB  sha256=abce895ac391
+  monthly 2026-04:  43,200 bars   1.69 MB  sha256=fa1bc3a2daba
+  monthly 2026-05:  44,640 bars   1.75 MB  sha256=56908ba13230
+  monthly 2026-06:  43,200 bars   1.73 MB  sha256=90cecd3b80ac
+  monthly 2026-07:  44,640 bars   1.72 MB  sha256=835f0da43f23
+  monthly 2026-08:  44,640 bars   1.75 MB  sha256=c2d64e7fccc7
+  monthly 2026-09:  43,200 bars   1.78 MB  sha256=70f33c0a260d
+  monthly 2026-10:  44,640 bars   1.77 MB  sha256=49d0fb5a1100
+[XRPUSDT] merged 789,120 bars in 35.3s
+[XRPUSDT] wrote data/binance/XRPUSDT_1m.csv.gz (22.28 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+report -> ../reports/fetch_report.json
+### exit=0
 
 ### data/binance
-total 0
+total 93M
+-rw-r--r-- 1 runner runner 26M Nov  7 10:44 BTCUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 25M Nov  7 10:45 ETHUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 22M Nov  7 10:46 SOLUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 22M Nov  7 10:47 XRPUSDT_1m.csv.gz
 
 ### fetch_report.json
-cat: ../reports/fetch_report.json: No such file or directory
+{
+  "generated_utc": "2026-11-07T10:43:00Z",
+  "start": "2025-05-02T00:00:00Z",
+  "end": "2026-10-31T23:59:59Z",
+  "span_days": 548.0,
+  "interval": "1m",
+  "rest_base": "https://data-api.binance.vision",
+  "symbols": {
+    "BTCUSDT": {
+      "source": "vision",
+      "path": "data/binance/BTCUSDT_1m.csv.gz",
+      "bytes": 26443266,
+      "reused_bars": 0,
+      "appended_bars": 789120,
+      "bars": 789120,
+      "span_minutes": 789120,
+      "missing_minutes": 0,
+      "missing_pct": 0.0,
+      "duplicates": 0,
+      "first": "2025-05-02T00:00:00Z",
+      "last": "2026-10-31T23:59:00Z",
+      "largest_holes": [],
+      "invalid": null
+    },
+    "ETHUSDT": {
+      "source": "vision",
+      "path": "data/binance/ETHUSDT_1m.csv.gz",
+      "bytes": 25398669,
+      "reused_bars": 0,
+      "appended_bars": 789120,
+      "bars": 789120,
+      "span_minutes": 789120,
+      "missing_minutes": 0,
+      "missing_pct": 0.0,
+      "duplicates": 0,
+      "first": "2025-05-02T00:00:00Z",
+      "last": "2026-10-31T23:59:00Z",
+      "largest_holes": [],
+      "invalid": null
+    },
+    "SOLUSDT": {
+      "source": "vision",
+      "path": "data/binance/SOLUSDT_1m.csv.gz",
+      "bytes": 22423200,
+      "reused_bars": 0,
+      "appended_bars": 789120,
+      "bars": 789120,
+      "span_minutes": 789120,
+      "missing_minutes": 0,
+      "missing_pct": 0.0,
+      "duplicates": 0,
+      "first": "2025-05-02T00:00:00Z",
+      "last": "2026-10-31T23:59:00Z",
+      "largest_holes": [],
+      "invalid": null
+    },
+    "XRPUSDT": {
+      "source": "vision",
+      "path": "data/binance/XRPUSDT_1m.csv.gz",
+      "bytes": 22283201,
+      "reused_bars": 0,
+      "appended_bars": 789120,
+      "bars": 789120,
+      "span_minutes": 789120,
+      "missing_minutes": 0,
+      "missing_pct": 0.0,
+      "duplicates": 0,
+      "first": "2025-05-02T00:00:00Z",
+      "last": "2026-10-31T23:59:00Z",
+      "largest_holes": [],
+      "invalid": null
+    }
+  }
+}

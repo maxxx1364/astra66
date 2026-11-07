@@ -1,1 +1,5 @@
+  ! skipping data/binance/BTCUSDT_1m.csv.gz: ValueError: unknown feed spec: 'data/binance/BTCUSDT_1m.csv.gz'
+  ! skipping data/binance/ETHUSDT_1m.csv.gz: ValueError: unknown feed spec: 'data/binance/ETHUSDT_1m.csv.gz'
+  ! skipping data/binance/SOLUSDT_1m.csv.gz: ValueError: unknown feed spec: 'data/binance/SOLUSDT_1m.csv.gz'
+  ! skipping data/binance/XRPUSDT_1m.csv.gz: ValueError: unknown feed spec: 'data/binance/XRPUSDT_1m.csv.gz'
 no data loaded
