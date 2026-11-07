@@ -504,3 +504,57 @@ class TestBinanceWsFeed:
         assert not os.environ.get("TBAE_REQUIRE_WS")
         ws = BinanceWsFeed()
         assert hasattr(ws, "snapshot")
+
+
+class TestTimestampPrecision:
+    """Epoch precision is an upstream contract that has already changed once.
+
+    Binance's vision archive moved from millisecond to **microsecond**
+    ``open_time``; the old parser rejected anything above 1e14 outright, so a
+    vision download died on the first monthly ZIP.  These tests pin all four
+    precisions to the same instant so the next upstream change fails here, in
+    one second, instead of forty minutes into a CI download.
+    """
+
+    INSTANT = 1_746_057_600_000          # 2025-05-01T00:00:00Z, in ms
+
+    @pytest.mark.parametrize("raw,label", [
+        ("1746057600", "seconds"),
+        ("1746057600000", "milliseconds"),
+        ("1746057600000000", "microseconds"),
+        ("1746057600000000000", "nanoseconds"),
+    ])
+    def test_every_epoch_precision_lands_on_the_same_instant(self, raw, label):
+        assert F._parse_ts(raw) == self.INSTANT, label
+
+    def test_microsecond_is_what_vision_serves_now(self):
+        """The exact string that made a real download fail."""
+        assert F._parse_ts("1746057600000000") == self.INSTANT
+
+    def test_nanoseconds_are_not_rounded_through_a_float(self):
+        """1.7e18 is past float64's exact-integer range; int() must be used."""
+        v = 1_746_057_600_123_456_789
+        assert F._parse_ts(str(v)) == v // 10**6
+
+    def test_a_decimal_epoch_string_still_parses(self):
+        assert F._parse_ts("1746057600000.0") == self.INSTANT
+
+    @pytest.mark.parametrize("raw", ["", "abc", "12", "-1746057600000"])
+    def test_nonsense_is_rejected_loudly(self, raw):
+        with pytest.raises(ValueError):
+            F._parse_ts(raw)
+
+    def test_a_vision_kline_zip_with_microsecond_times_loads(self):
+        """End-to-end: the archive format that broke the downloader."""
+        import zipfile
+        import io as _io
+        # raw kline column order, no header — exactly what vision ships
+        row = ("1746057600000000", "100.0", "101.0", "99.0", "100.5", "10.0",
+               "1746057659999000", "1005.0", "5", "6.0", "600.0", "0")
+        buf = _io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("BTCUSDT-1m-2025-05.csv", ",".join(row) + "\n")
+        from scripts.fetch_binance import parse_kline_zip
+        bars = parse_kline_zip(buf.getvalue(), name="test")
+        assert len(bars) == 1
+        assert bars[0].ts == self.INSTANT

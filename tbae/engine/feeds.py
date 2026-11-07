@@ -314,19 +314,42 @@ def _pick(header: Sequence[str], names: Iterable[str]) -> int:
     return -1
 
 
+#: Epoch-magnitude thresholds.  Binance's vision archive moved from
+#: millisecond to **microsecond** open_time (e.g. 1746057600000000 for
+#: 2025-05-01T00:00:00Z); the previous ``v > 1e14: raise`` guard rejected those
+#: outright, which is why a vision download died on the very first monthly ZIP.
+#: Dispatching on magnitude keeps every producer we have seen working:
+#:
+#:     seconds       1_746_057_600           (1.7e9)
+#:     milliseconds  1_746_057_600_000       (1.7e12)
+#:     microseconds  1_746_057_600_000_000   (1.7e15)  <- vision, current
+#:     nanoseconds   1_746_057_600_000_000_000 (1.7e18)
+_NS, _US, _MS, _S = 10**17, 10**14, 10**11, 10**9
+
+
 def _parse_ts(raw: str) -> int:
     raw = raw.strip()
     if not raw:
         raise ValueError("empty timestamp")
-    # epoch ms / s
+    # epoch, at any of the four precisions above
     try:
-        v = float(raw)
-        if v > 1e14:
-            raise ValueError("timestamp out of range")
-        if v > 1e11:          # milliseconds
-            return int(v)
-        if v > 1e9:           # seconds
-            return int(v * 1000)
+        # int() first, deliberately: a nanosecond epoch (1.7e18) is past
+        # float64's exact-integer range, and rounding there would silently
+        # shift a bar by minutes.
+        try:
+            v = int(raw)
+        except ValueError:
+            v = int(float(raw))          # "1746057600000.0"
+        if v < 0:
+            raise ValueError(f"negative timestamp: {raw}")
+        if v >= _NS:                      # nanoseconds
+            return v // 10**6
+        if v >= _US:                      # microseconds
+            return v // 10**3
+        if v >= _MS:                      # milliseconds
+            return v
+        if v >= _S:                       # seconds
+            return v * 1000
         raise ValueError(f"unrecognised epoch timestamp: {raw}")
     except ValueError:
         pass
