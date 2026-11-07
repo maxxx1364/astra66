@@ -18,6 +18,16 @@ name: compression-study
 # api.binance.com or data.binance.vision.  Runners do.
 
 on:
+  # A branch other than the default cannot be dispatched through the API
+  # (GitHub only registers workflow_dispatch from the default branch), so the
+  # push trigger is what lets this be exercised from a working branch.  The
+  # paths filter keeps it from firing on unrelated commits.
+  push:
+    branches: ["arena/**"]
+    paths:
+      - ".github/workflows/compression-study.yml"
+      - "tbae/scripts/compression_study.py"
+      - "tbae/engine/**"
   workflow_dispatch:
     inputs:
       symbols:
