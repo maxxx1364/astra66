@@ -110,6 +110,15 @@ jobs:
           PY
         working-directory: tbae
 
+      # Re-running for a different --tf or --horizon should not pay for the
+      # download again: the candles are identical, only the resampling changes.
+      - name: Restore the kline cache
+        id: kcache
+        uses: actions/cache/restore@v4
+        with:
+          path: tbae/data/binance
+          key: compression-klines-${{ steps.window.outputs.start }}-${{ steps.window.outputs.end }}-${{ github.event.inputs.symbols || 'default' }}
+
       # One ZIP per symbol-month.  24 symbols x 18 months = 432 requests, which
       # is the whole point of using vision instead of REST paging (~1600 per
       # symbol for the same history).
@@ -144,6 +153,13 @@ jobs:
             cat ../reports/fetch_report.json 2>&1 | head -c 4000
           } 2>&1 | tee ../reports/01_download.txt
         working-directory: tbae
+
+      - name: Save the kline cache
+        if: ${{ always() && steps.kcache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: tbae/data/binance
+          key: compression-klines-${{ steps.window.outputs.start }}-${{ steps.window.outputs.end }}-${{ github.event.inputs.symbols || 'default' }}
 
       - name: Run the base-rate study
         id: study

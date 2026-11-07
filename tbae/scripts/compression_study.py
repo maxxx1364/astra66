@@ -245,9 +245,16 @@ def load_bars(a) -> list[tuple[str, list]]:
     if a.feeds_dir:
         paths = sorted(glob.glob(os.path.join(a.feeds_dir, "*.csv"))
                        + glob.glob(os.path.join(a.feeds_dir, "*.csv.gz")))
-        return [(Path(p).stem, bars_for(p, a)) for p in paths if bars_for(p, a)]
+        out = []
+        for p in paths:
+            # load_feed() wants a spec ("csv:path"), not a bare path
+            b = bars_for(f"csv:{p}", a)
+            if b:
+                out.append((Path(p).stem.replace("_1m", ""), b))
+        return out
     if a.feed and not a.feed.startswith("synthetic"):
-        return [(Path(a.feed).stem, bars_for(a.feed, a))]
+        spec = a.feed if ":" in a.feed else f"csv:{a.feed}"
+        return [(Path(spec).stem, bars_for(spec, a))]
     out = []
     for seed in range(1, a.seeds + 1):
         minutes = feeds.SyntheticFeed(
