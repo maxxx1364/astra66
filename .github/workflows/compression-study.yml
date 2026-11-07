@@ -39,9 +39,9 @@ on:
       tf:
         description: "Study timeframe in minutes"
         default: "15"
-      horizon:
-        description: "Forward bars over which the move must happen"
-        default: "40"
+      horizons:
+        description: "Space-separated forward horizons to sweep"
+        default: "40 80 160 320"
       min_bars:
         description: "Bars a coin must stay coiled to count"
         default: "6"
@@ -179,20 +179,29 @@ jobs:
           path: tbae/data/binance
           key: ${{ steps.ckey.outputs.key }}
 
+      # The candles are already on disk by now, so sweeping the horizon costs
+      # compute only — no extra download.  40 bars is 10 hours at 15m, which is
+      # a guess at how long an "explosive move" takes; the sweep replaces the
+      # guess with a measurement.
       - name: Run the base-rate study
         id: study
         continue-on-error: true
         run: |
           set +e
-          python scripts/compression_study.py \
-            --feeds-dir data/binance \
-            --tf "${{ github.event.inputs.tf || '15' }}" \
-            --horizon "${{ github.event.inputs.horizon || '40' }}" \
-            --min-bars "${{ github.event.inputs.min_bars || '6' }}" \
-            --profile \
-            --json ../reports/compression_study.json \
-            2>&1 | tee ../reports/compression_study.txt
-          echo "### exit=$?"
+          : > ../reports/compression_study.txt
+          for H in ${{ github.event.inputs.horizons || '40 80 160 320' }}; do
+            echo "" | tee -a ../reports/compression_study.txt
+            echo "############ HORIZON = ${H} bars ############" | tee -a ../reports/compression_study.txt
+            python scripts/compression_study.py \
+              --feeds-dir data/binance \
+              --tf "${{ github.event.inputs.tf || '15' }}" \
+              --horizon "$H" \
+              --min-bars "${{ github.event.inputs.min_bars || '6' }}" \
+              --profile \
+              --json "../reports/compression_h${H}.json" \
+              2>&1 | tee -a ../reports/compression_study.txt
+            echo "### exit=$?"
+          done
         working-directory: tbae
 
       - name: Job summary
