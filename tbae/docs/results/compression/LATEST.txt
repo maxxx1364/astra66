@@ -1,5 +1,61 @@
-  ! skipping data/binance/BTCUSDT_1m.csv.gz: ValueError: unknown feed spec: 'data/binance/BTCUSDT_1m.csv.gz'
-  ! skipping data/binance/ETHUSDT_1m.csv.gz: ValueError: unknown feed spec: 'data/binance/ETHUSDT_1m.csv.gz'
-  ! skipping data/binance/SOLUSDT_1m.csv.gz: ValueError: unknown feed spec: 'data/binance/SOLUSDT_1m.csv.gz'
-  ! skipping data/binance/XRPUSDT_1m.csv.gz: ValueError: unknown feed spec: 'data/binance/XRPUSDT_1m.csv.gz'
-no data loaded
+
+symbols=4  tf=15m  horizon=40b  min_bars=6  range_rank=0.2
+
+definition                        n  med MFE     >2R     >3R     >5R     >8R    >13R
+------------------------------------------------------------------------------------
+all bars (control)           210432     2.64   60.0%   44.6%   24.9%   10.9%    3.2%
+squeeze                       48184     3.00   64.9%   49.7%   28.9%   13.4%    4.2%
+range >= 6b                   32695     3.18   67.1%   52.1%   30.5%   14.6%    4.3%
+dead >= 6b                    23221     3.47   67.6%   53.5%   32.7%   16.0%    5.1%
+squeeze AND range             25961     3.20   67.5%   52.4%   30.4%   14.5%    4.2%
+
+lift vs unconditional control at >=5R (base 24.9%, 1.00x = no predictive value):
+  squeeze                    2R: 1.08x  3R: 1.12x  5R: 1.16x  8R: 1.23x  13R: 1.31x
+  range >= 6b                2R: 1.12x  3R: 1.17x  5R: 1.23x  8R: 1.34x  13R: 1.33x
+  dead >= 6b                 2R: 1.13x  3R: 1.20x  5R: 1.32x  8R: 1.46x  13R: 1.58x
+  squeeze AND range          2R: 1.12x  3R: 1.17x  5R: 1.22x  8R: 1.33x  13R: 1.30x
+
+==============================================================================
+FEATURE PROFILE — lift at >=5R, pooled across 4 symbols
+==============================================================================
+
+range width percentile   (base rate 24.9%)
+    <= 0.10                    n=  17440   30.3%   1.22x  #############
+    <= 0.20                    n=  34012   29.8%   1.20x  ############
+    <= 0.30                    n=  51840   29.9%   1.20x  ############
+    <= 0.50                    n=  88188   29.6%   1.19x  ###########
+
+bars stuck in range   (base rate 24.9%)
+    >= 3b                      n=  29508   30.0%   1.21x  ############
+    >= 6b                      n=  24252   30.2%   1.22x  #############
+    >= 10b                     n=  19168   31.0%   1.25x  ###############
+    >= 16b                     n=  13764   32.9%   1.32x  ###################
+    >= 24b                     n=   9000   34.1%   1.37x  ######################
+
+bollinger squeeze rank   (base rate 24.9%)
+    <= 0.05                    n=  17136   28.9%   1.16x  ##########
+    <= 0.10                    n=  28624   29.1%   1.17x  ##########
+    <= 0.20                    n=  48776   28.1%   1.13x  ########
+    <= 0.30                    n=  68800   28.0%   1.13x  ########
+
+ATR percentile (how quiet)   (base rate 24.9%)
+    <= 0.10                    n=  37704   31.0%   1.25x  ###############
+    <= 0.20                    n=  56112   30.3%   1.22x  #############
+    <= 0.35                    n=  81696   29.5%   1.19x  ###########
+    <= 0.50                    n= 105684   29.2%   1.17x  ##########
+
+position inside channel   (base rate 24.9%)
+    0.0-0.2                    n=  39248   23.9%   0.96x  
+    0.2-0.5                    n=  51004   25.0%   1.01x  
+    0.5-0.8                    n=  54224   25.1%   1.01x  #
+    0.8-1.0                    n=  45428   24.8%   1.00x  
+
+volume z during coil   (base rate 24.9%)
+    bottom third (<-0.47)      n=  70144   27.9%   1.12x  #######
+    top third (>-0.05)         n=  70144   22.5%   0.90x  
+
+wrote ../reports/compression_study.json
+
+Reminder: MFE is a ceiling, not a captured return.  On synthetic
+data a lift is a harness check, not evidence — GARCH clusters
+volatility by construction.

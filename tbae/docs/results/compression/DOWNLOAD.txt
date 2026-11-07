@@ -1,4 +1,4 @@
-### runner clock: Sat Nov  7 10:43:42 UTC 2026
+### runner clock: Sat Nov  7 10:49:00 UTC 2026
 ### window: 2025-05-02 .. 2026-10-31
 
 ### fetch_binance.py
@@ -21,7 +21,7 @@
   monthly 2026-08:  44,640 bars   2.08 MB  sha256=acab442e0274
   monthly 2026-09:  43,200 bars   2.05 MB  sha256=7a021fb5981c
   monthly 2026-10:  44,640 bars   2.11 MB  sha256=17168f260306
-[BTCUSDT] merged 789,120 bars in 38.6s
+[BTCUSDT] merged 789,120 bars in 38.1s
 [BTCUSDT] wrote data/binance/BTCUSDT_1m.csv.gz (26.44 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
 [ETHUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
   monthly 2025-05:  44,640 bars   2.13 MB  sha256=743268912388
@@ -42,7 +42,7 @@
   monthly 2026-08:  44,640 bars   2.01 MB  sha256=f2f2fe8da854
   monthly 2026-09:  43,200 bars   1.99 MB  sha256=827b46043bdc
   monthly 2026-10:  44,640 bars   2.03 MB  sha256=bcbfb8f896ba
-[ETHUSDT] merged 789,120 bars in 36.7s
+[ETHUSDT] merged 789,120 bars in 38.3s
 [ETHUSDT] wrote data/binance/ETHUSDT_1m.csv.gz (25.40 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
 [SOLUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
   monthly 2025-05:  44,640 bars   1.92 MB  sha256=7fdc3b4c5a74
@@ -63,7 +63,7 @@
   monthly 2026-08:  44,640 bars   1.78 MB  sha256=138412edb2c8
   monthly 2026-09:  43,200 bars   1.79 MB  sha256=c18c258e478a
   monthly 2026-10:  44,640 bars   1.82 MB  sha256=9e7202163239
-[SOLUSDT] merged 789,120 bars in 36.5s
+[SOLUSDT] merged 789,120 bars in 35.1s
 [SOLUSDT] wrote data/binance/SOLUSDT_1m.csv.gz (22.42 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
 [XRPUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
   monthly 2025-05:  44,640 bars   1.88 MB  sha256=0e17b5a7e1d0
@@ -84,21 +84,21 @@
   monthly 2026-08:  44,640 bars   1.75 MB  sha256=c2d64e7fccc7
   monthly 2026-09:  43,200 bars   1.78 MB  sha256=70f33c0a260d
   monthly 2026-10:  44,640 bars   1.77 MB  sha256=49d0fb5a1100
-[XRPUSDT] merged 789,120 bars in 35.3s
+[XRPUSDT] merged 789,120 bars in 37.4s
 [XRPUSDT] wrote data/binance/XRPUSDT_1m.csv.gz (22.28 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
 report -> ../reports/fetch_report.json
 ### exit=0
 
 ### data/binance
 total 93M
--rw-r--r-- 1 runner runner 26M Nov  7 10:44 BTCUSDT_1m.csv.gz
--rw-r--r-- 1 runner runner 25M Nov  7 10:45 ETHUSDT_1m.csv.gz
--rw-r--r-- 1 runner runner 22M Nov  7 10:46 SOLUSDT_1m.csv.gz
--rw-r--r-- 1 runner runner 22M Nov  7 10:47 XRPUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 26M Nov  7 10:49 BTCUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 25M Nov  7 10:50 ETHUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 22M Nov  7 10:51 SOLUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 22M Nov  7 10:52 XRPUSDT_1m.csv.gz
 
 ### fetch_report.json
 {
-  "generated_utc": "2026-11-07T10:43:00Z",
+  "generated_utc": "2026-11-07T10:49:00Z",
   "start": "2025-05-02T00:00:00Z",
   "end": "2026-10-31T23:59:59Z",
   "span_days": 548.0,
