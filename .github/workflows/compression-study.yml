@@ -115,6 +115,19 @@ jobs:
           PY
         working-directory: tbae
 
+      # Cache keys may not contain commas, and a 24-symbol universe would blow
+      # past the length limit anyway — so the symbol set is hashed into a short
+      # stable slug.  (main.yml solves the same problem with tr, but that only
+      # fits four symbols.)
+      - name: Compute the cache key
+        id: ckey
+        run: |
+          slug=$(printf '%s' "${{ github.event.inputs.symbols || env.UNIVERSE }}" \
+                 | md5sum | cut -c1-12)
+          key="ck-${{ steps.window.outputs.start }}-${{ steps.window.outputs.end }}-${slug}"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          echo "cache key: $key"
+
       # Re-running for a different --tf or --horizon should not pay for the
       # download again: the candles are identical, only the resampling changes.
       - name: Restore the kline cache
@@ -122,7 +135,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: tbae/data/binance
-          key: compression-klines-${{ steps.window.outputs.start }}-${{ steps.window.outputs.end }}-${{ github.event.inputs.symbols || env.UNIVERSE }}
+          key: ${{ steps.ckey.outputs.key }}
 
       # One ZIP per symbol-month.  24 symbols x 18 months = 432 requests, which
       # is the whole point of using vision instead of REST paging (~1600 per
@@ -164,7 +177,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: tbae/data/binance
-          key: compression-klines-${{ steps.window.outputs.start }}-${{ steps.window.outputs.end }}-${{ github.event.inputs.symbols || env.UNIVERSE }}
+          key: ${{ steps.ckey.outputs.key }}
 
       - name: Run the base-rate study
         id: study
