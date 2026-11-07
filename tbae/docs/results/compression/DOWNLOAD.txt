@@ -1,4 +1,4 @@
-### runner clock: Sat Nov  7 10:49:00 UTC 2026
+### runner clock: Sat Nov  7 11:02:06 UTC 2026
 ### window: 2025-05-02 .. 2026-10-31
 
 ### fetch_binance.py
@@ -21,7 +21,7 @@
   monthly 2026-08:  44,640 bars   2.08 MB  sha256=acab442e0274
   monthly 2026-09:  43,200 bars   2.05 MB  sha256=7a021fb5981c
   monthly 2026-10:  44,640 bars   2.11 MB  sha256=17168f260306
-[BTCUSDT] merged 789,120 bars in 38.1s
+[BTCUSDT] merged 789,120 bars in 33.2s
 [BTCUSDT] wrote data/binance/BTCUSDT_1m.csv.gz (26.44 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
 [ETHUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
   monthly 2025-05:  44,640 bars   2.13 MB  sha256=743268912388
@@ -42,8 +42,29 @@
   monthly 2026-08:  44,640 bars   2.01 MB  sha256=f2f2fe8da854
   monthly 2026-09:  43,200 bars   1.99 MB  sha256=827b46043bdc
   monthly 2026-10:  44,640 bars   2.03 MB  sha256=bcbfb8f896ba
-[ETHUSDT] merged 789,120 bars in 38.3s
+[ETHUSDT] merged 789,120 bars in 33.4s
 [ETHUSDT] wrote data/binance/ETHUSDT_1m.csv.gz (25.40 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[BNBUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.83 MB  sha256=55dec1a2ce8c
+  monthly 2025-06:  43,200 bars   1.72 MB  sha256=e25f4d9b207c
+  monthly 2025-07:  44,640 bars   1.83 MB  sha256=24b0467ca191
+  monthly 2025-08:  44,640 bars   1.86 MB  sha256=639e8ac67bad
+  monthly 2025-09:  43,200 bars   1.80 MB  sha256=fd7dfed0ad33
+  monthly 2025-10:  44,640 bars   1.98 MB  sha256=7bfeb8f2d94e
+  monthly 2025-11:  43,200 bars   1.84 MB  sha256=991d89f1a096
+  monthly 2025-12:  44,640 bars   1.83 MB  sha256=d7a1c0fca809
+  monthly 2026-01:  44,640 bars   1.81 MB  sha256=b0d665cfcab2
+  monthly 2026-02:  40,320 bars   1.67 MB  sha256=967d39b39ad3
+  monthly 2026-03:  44,640 bars   1.80 MB  sha256=2ab6f8bcfe0b
+  monthly 2026-04:  43,200 bars   1.72 MB  sha256=0484b805499b
+  monthly 2026-05:  44,640 bars   1.80 MB  sha256=cc9bf02f8a5e
+  monthly 2026-06:  43,200 bars   1.76 MB  sha256=38e29791ad2b
+  monthly 2026-07:  44,640 bars   1.76 MB  sha256=239c3dbc7e86
+  monthly 2026-08:  44,640 bars   1.78 MB  sha256=12eba4bd8dbb
+  monthly 2026-09:  43,200 bars   1.76 MB  sha256=eb80524463d5
+  monthly 2026-10:  44,640 bars   1.79 MB  sha256=a81bf88d9b53
+[BNBUSDT] merged 789,120 bars in 32.1s
+[BNBUSDT] wrote data/binance/BNBUSDT_1m.csv.gz (22.31 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
 [SOLUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
   monthly 2025-05:  44,640 bars   1.92 MB  sha256=7fdc3b4c5a74
   monthly 2025-06:  43,200 bars   1.84 MB  sha256=df0158c33ab9
@@ -63,7 +84,7 @@
   monthly 2026-08:  44,640 bars   1.78 MB  sha256=138412edb2c8
   monthly 2026-09:  43,200 bars   1.79 MB  sha256=c18c258e478a
   monthly 2026-10:  44,640 bars   1.82 MB  sha256=9e7202163239
-[SOLUSDT] merged 789,120 bars in 35.1s
+[SOLUSDT] merged 789,120 bars in 31.1s
 [SOLUSDT] wrote data/binance/SOLUSDT_1m.csv.gz (22.42 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
 [XRPUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
   monthly 2025-05:  44,640 bars   1.88 MB  sha256=0e17b5a7e1d0
@@ -84,21 +105,440 @@
   monthly 2026-08:  44,640 bars   1.75 MB  sha256=c2d64e7fccc7
   monthly 2026-09:  43,200 bars   1.78 MB  sha256=70f33c0a260d
   monthly 2026-10:  44,640 bars   1.77 MB  sha256=49d0fb5a1100
-[XRPUSDT] merged 789,120 bars in 37.4s
+[XRPUSDT] merged 789,120 bars in 31.6s
 [XRPUSDT] wrote data/binance/XRPUSDT_1m.csv.gz (22.28 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[DOGEUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.88 MB  sha256=f0009a70af9c
+  monthly 2025-06:  43,200 bars   1.75 MB  sha256=e57bb49ddee5
+  monthly 2025-07:  44,640 bars   1.88 MB  sha256=ea9c5d3cfb54
+  monthly 2025-08:  44,640 bars   1.88 MB  sha256=ec309073517e
+  monthly 2025-09:  43,200 bars   1.81 MB  sha256=dc7b806fccf9
+  monthly 2025-10:  44,640 bars   1.88 MB  sha256=89f1752ce73f
+  monthly 2025-11:  43,200 bars   1.78 MB  sha256=cd6528452630
+  monthly 2025-12:  44,640 bars   1.75 MB  sha256=8d108055cf07
+  monthly 2026-01:  44,640 bars   1.77 MB  sha256=4950fb43efe0
+  monthly 2026-02:  40,320 bars   1.61 MB  sha256=bcf1d323cc4f
+  monthly 2026-03:  44,640 bars   1.75 MB  sha256=6dc36b26071b
+  monthly 2026-04:  43,200 bars   1.68 MB  sha256=71b6ccd21abe
+  monthly 2026-05:  44,640 bars   1.74 MB  sha256=6d9eedc643d2
+  monthly 2026-06:  43,200 bars   1.66 MB  sha256=18959935b2ba
+  monthly 2026-07:  44,640 bars   1.65 MB  sha256=1cf28dc7d7e4
+  monthly 2026-08:  44,640 bars   1.65 MB  sha256=ac6c9f0ecd41
+  monthly 2026-09:  43,200 bars   1.70 MB  sha256=4a14f7aaeef5
+  monthly 2026-10:  44,640 bars   1.69 MB  sha256=91d5756f9ffd
+[DOGEUSDT] merged 789,120 bars in 31.9s
+[DOGEUSDT] wrote data/binance/DOGEUSDT_1m.csv.gz (21.79 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[ADAUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.78 MB  sha256=25918f1cf844
+  monthly 2025-06:  43,200 bars   1.68 MB  sha256=cace0df538c9
+  monthly 2025-07:  44,640 bars   1.79 MB  sha256=071b0c252dc8
+  monthly 2025-08:  44,640 bars   1.82 MB  sha256=248bf83a4a53
+  monthly 2025-09:  43,200 bars   1.70 MB  sha256=a306c02aa4c5
+  monthly 2025-10:  44,640 bars   1.77 MB  sha256=d8437030d4f8
+  monthly 2025-11:  43,200 bars   1.69 MB  sha256=e550aa57efd4
+  monthly 2025-12:  44,640 bars   1.67 MB  sha256=5a5264141cdd
+  monthly 2026-01:  44,640 bars   1.67 MB  sha256=4690a066eb3c
+  monthly 2026-02:  40,320 bars   1.51 MB  sha256=56a05789ae7a
+  monthly 2026-03:  44,640 bars   1.63 MB  sha256=79bff8b12be9
+  monthly 2026-04:  43,200 bars   1.54 MB  sha256=e270624a9150
+  monthly 2026-05:  44,640 bars   1.56 MB  sha256=be95bc2bcc0e
+  monthly 2026-06:  43,200 bars   1.56 MB  sha256=90f680342607
+  monthly 2026-07:  44,640 bars   1.53 MB  sha256=856c6ae6f62b
+  monthly 2026-08:  44,640 bars   1.57 MB  sha256=03e8cf5a9874
+  monthly 2026-09:  43,200 bars   1.60 MB  sha256=bb4d8a12037c
+  monthly 2026-10:  44,640 bars   1.60 MB  sha256=60e5b17c9610
+[ADAUSDT] merged 789,120 bars in 30.9s
+[ADAUSDT] wrote data/binance/ADAUSDT_1m.csv.gz (20.39 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[AVAXUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.60 MB  sha256=1be30ae7377b
+  monthly 2025-06:  43,200 bars   1.48 MB  sha256=7a269b8a22bf
+  monthly 2025-07:  44,640 bars   1.58 MB  sha256=ed493b429564
+  monthly 2025-08:  44,640 bars   1.59 MB  sha256=4bda48ea3f58
+  monthly 2025-09:  43,200 bars   1.58 MB  sha256=cb4d1a163a23
+  monthly 2025-10:  44,640 bars   1.60 MB  sha256=e965fd874b94
+  monthly 2025-11:  43,200 bars   1.49 MB  sha256=89489bb1062d
+  monthly 2025-12:  44,640 bars   1.43 MB  sha256=6464c58b3418
+  monthly 2026-01:  44,640 bars   1.42 MB  sha256=f5bf424edcff
+  monthly 2026-02:  40,320 bars   1.27 MB  sha256=00082e7f5902
+  monthly 2026-03:  44,640 bars   1.35 MB  sha256=d667c5051ccf
+  monthly 2026-04:  43,200 bars   1.29 MB  sha256=a96afc67c105
+  monthly 2026-05:  44,640 bars   1.43 MB  sha256=e0364c18a91f
+  monthly 2026-06:  43,200 bars   1.62 MB  sha256=e54a244ec6e3
+  monthly 2026-07:  44,640 bars   1.56 MB  sha256=ff0d4d30dd72
+  monthly 2026-08:  44,640 bars   1.57 MB  sha256=a81dde8798cc
+  monthly 2026-09:  43,200 bars   1.65 MB  sha256=bef7b67f8b8c
+  monthly 2026-10:  44,640 bars   1.70 MB  sha256=8ef4c9921e33
+[AVAXUSDT] merged 789,120 bars in 32.4s
+[AVAXUSDT] wrote data/binance/AVAXUSDT_1m.csv.gz (18.71 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[LINKUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.57 MB  sha256=d57ac5370bf8
+  monthly 2025-06:  43,200 bars   1.44 MB  sha256=a1bdb812df15
+  monthly 2025-07:  44,640 bars   1.56 MB  sha256=d103165d5a02
+  monthly 2025-08:  44,640 bars   1.65 MB  sha256=28f9cf0ad9bb
+  monthly 2025-09:  43,200 bars   1.52 MB  sha256=ecb6b6484225
+  monthly 2025-10:  44,640 bars   1.60 MB  sha256=437fb268f3e2
+  monthly 2025-11:  43,200 bars   1.52 MB  sha256=d4c98a9b7759
+  monthly 2025-12:  44,640 bars   1.46 MB  sha256=58a247192cbf
+  monthly 2026-01:  44,640 bars   1.43 MB  sha256=c8f7e670634e
+  monthly 2026-02:  40,320 bars   1.30 MB  sha256=60af77b6cc22
+  monthly 2026-03:  44,640 bars   1.39 MB  sha256=5748a01da70c
+  monthly 2026-04:  43,200 bars   1.29 MB  sha256=e051d0a9b567
+  monthly 2026-05:  44,640 bars   1.48 MB  sha256=93b44c81989b
+  monthly 2026-06:  43,200 bars   1.59 MB  sha256=fdf3e54ab042
+  monthly 2026-07:  44,640 bars   1.57 MB  sha256=d2b1ca9f7d84
+  monthly 2026-08:  44,640 bars   1.65 MB  sha256=c7a1e12faf1c
+  monthly 2026-09:  43,200 bars   1.69 MB  sha256=47e0c4088f9a
+  monthly 2026-10:  44,640 bars   1.70 MB  sha256=c73f09e334e1
+[LINKUSDT] merged 789,120 bars in 35.7s
+[LINKUSDT] wrote data/binance/LINKUSDT_1m.csv.gz (18.78 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[DOTUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.67 MB  sha256=811fcc2ca3c1
+  monthly 2025-06:  43,200 bars   1.55 MB  sha256=7af0cec2ad92
+  monthly 2025-07:  44,640 bars   1.66 MB  sha256=2fb48f7bb0a4
+  monthly 2025-08:  44,640 bars   1.66 MB  sha256=fae0cc2a778b
+  monthly 2025-09:  43,200 bars   1.59 MB  sha256=b908d7df347a
+  monthly 2025-10:  44,640 bars   1.65 MB  sha256=0cb2186fa439
+  monthly 2025-11:  43,200 bars   1.59 MB  sha256=7f01cf0f334f
+  monthly 2025-12:  44,640 bars   1.52 MB  sha256=47b0941d96c3
+  monthly 2026-01:  44,640 bars   1.52 MB  sha256=28c3338eac06
+  monthly 2026-02:  40,320 bars   1.36 MB  sha256=e216966da163
+  monthly 2026-03:  44,640 bars   1.49 MB  sha256=add362e56f8c
+  monthly 2026-04:  43,200 bars   1.35 MB  sha256=aa21673256e8
+  monthly 2026-05:  44,640 bars   1.41 MB  sha256=6dd080e7e4cf
+  monthly 2026-06:  43,200 bars   1.35 MB  sha256=4c12c6c2d4a8
+  monthly 2026-07:  44,640 bars   1.21 MB  sha256=6cc3e9fb1e63
+  monthly 2026-08:  44,640 bars   1.20 MB  sha256=c02cfeb26ec0
+  monthly 2026-09:  43,200 bars   1.47 MB  sha256=1df77b0ecac3
+  monthly 2026-10:  44,640 bars   1.47 MB  sha256=8db56dcd105b
+[DOTUSDT] merged 789,120 bars in 33.8s
+[DOTUSDT] wrote data/binance/DOTUSDT_1m.csv.gz (18.39 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[LTCUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.77 MB  sha256=dec3727fe9b5
+  monthly 2025-06:  43,200 bars   1.65 MB  sha256=7c65bdac47fd
+  monthly 2025-07:  44,640 bars   1.77 MB  sha256=3e3eceb91551
+  monthly 2025-08:  44,640 bars   1.78 MB  sha256=91ffb4196da2
+  monthly 2025-09:  43,200 bars   1.66 MB  sha256=f61537a60c89
+  monthly 2025-10:  44,640 bars   1.78 MB  sha256=35f2df22a5f4
+  monthly 2025-11:  43,200 bars   1.73 MB  sha256=74e0a4ea11b6
+  monthly 2025-12:  44,640 bars   1.69 MB  sha256=e0218d722dab
+  monthly 2026-01:  44,640 bars   1.71 MB  sha256=ef6c453a18f7
+  monthly 2026-02:  40,320 bars   1.53 MB  sha256=90bde58c6d78
+  monthly 2026-03:  44,640 bars   1.65 MB  sha256=a764ab37d34a
+  monthly 2026-04:  43,200 bars   1.55 MB  sha256=22741a217419
+  monthly 2026-05:  44,640 bars   1.62 MB  sha256=68783c22ae10
+  monthly 2026-06:  43,200 bars   1.59 MB  sha256=ef17d6bcf062
+  monthly 2026-07:  44,640 bars   1.61 MB  sha256=fd20ac07d99f
+  monthly 2026-08:  44,640 bars   1.59 MB  sha256=f68a83b1d986
+  monthly 2026-09:  43,200 bars   1.65 MB  sha256=c2d1171dc246
+  monthly 2026-10:  44,640 bars   1.66 MB  sha256=4d3b57c02f6b
+[LTCUSDT] merged 789,120 bars in 35.8s
+[LTCUSDT] wrote data/binance/LTCUSDT_1m.csv.gz (20.42 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[TRXUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.64 MB  sha256=5c4202fe75de
+  monthly 2025-06:  43,200 bars   1.55 MB  sha256=daa88d167aef
+  monthly 2025-07:  44,640 bars   1.63 MB  sha256=862231affa23
+  monthly 2025-08:  44,640 bars   1.64 MB  sha256=61aca202ec61
+  monthly 2025-09:  43,200 bars   1.53 MB  sha256=502d2b29a601
+  monthly 2025-10:  44,640 bars   1.60 MB  sha256=cf4859544fd3
+  monthly 2025-11:  43,200 bars   1.54 MB  sha256=18906ae3b699
+  monthly 2025-12:  44,640 bars   1.54 MB  sha256=dd4d6113cd9f
+  monthly 2026-01:  44,640 bars   1.56 MB  sha256=5801e601a993
+  monthly 2026-02:  40,320 bars   1.39 MB  sha256=a65cc71458c8
+  monthly 2026-03:  44,640 bars   1.55 MB  sha256=df689edda660
+  monthly 2026-04:  43,200 bars   1.47 MB  sha256=d4cd2701746e
+  monthly 2026-05:  44,640 bars   1.55 MB  sha256=7a3e56255efb
+  monthly 2026-06:  43,200 bars   1.49 MB  sha256=7ef6537ef0f7
+  monthly 2026-07:  44,640 bars   1.48 MB  sha256=863d6fec3d7e
+  monthly 2026-08:  44,640 bars   1.48 MB  sha256=7a186e62232d
+  monthly 2026-09:  43,200 bars   1.45 MB  sha256=b40b0f73450e
+  monthly 2026-10:  44,640 bars   1.50 MB  sha256=efc3e4416e17
+[TRXUSDT] merged 789,120 bars in 33.6s
+[TRXUSDT] wrote data/binance/TRXUSDT_1m.csv.gz (18.50 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[ATOMUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.58 MB  sha256=6077820705ce
+  monthly 2025-06:  43,200 bars   1.42 MB  sha256=59c0909169b4
+  monthly 2025-07:  44,640 bars   1.55 MB  sha256=ec5a378b84f7
+  monthly 2025-08:  44,640 bars   1.54 MB  sha256=ca534b45675e
+  monthly 2025-09:  43,200 bars   1.43 MB  sha256=2bde65bd987f
+  monthly 2025-10:  44,640 bars   1.50 MB  sha256=c61d43e8f85e
+  monthly 2025-11:  43,200 bars   1.44 MB  sha256=57389046befb
+  monthly 2025-12:  44,640 bars   1.30 MB  sha256=acec8580658a
+  monthly 2026-01:  44,640 bars   1.40 MB  sha256=55f3efee9e73
+  monthly 2026-02:  40,320 bars   1.26 MB  sha256=9cc0d98a0a13
+  monthly 2026-03:  44,640 bars   1.20 MB  sha256=517056fa5a25
+  monthly 2026-04:  43,200 bars   1.09 MB  sha256=51cf5fbf720b
+  monthly 2026-05:  44,640 bars   1.29 MB  sha256=6568d7d3116b
+  monthly 2026-06:  43,200 bars   1.21 MB  sha256=b1f99544c55e
+  monthly 2026-07:  44,640 bars   1.03 MB  sha256=d08e6b7d89d1
+  monthly 2026-08:  44,640 bars   1.08 MB  sha256=1ba6ef6e9e4e
+  monthly 2026-09:  43,200 bars   1.25 MB  sha256=2bceb5aae21c
+  monthly 2026-10:  44,640 bars   1.30 MB  sha256=509bd4e97ce6
+[ATOMUSDT] merged 789,120 bars in 30.9s
+[ATOMUSDT] wrote data/binance/ATOMUSDT_1m.csv.gz (16.86 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[NEARUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.58 MB  sha256=e89604b39970
+  monthly 2025-06:  43,200 bars   1.48 MB  sha256=06bbb1ccd971
+  monthly 2025-07:  44,640 bars   1.57 MB  sha256=1607b0ca4d04
+  monthly 2025-08:  44,640 bars   1.54 MB  sha256=a83efa96d5c3
+  monthly 2025-09:  43,200 bars   1.49 MB  sha256=774222a87e65
+  monthly 2025-10:  44,640 bars   1.57 MB  sha256=79959f601300
+  monthly 2025-11:  43,200 bars   1.55 MB  sha256=b12bccf4d57c
+  monthly 2025-12:  44,640 bars   1.45 MB  sha256=d3fb12a82093
+  monthly 2026-01:  44,640 bars   1.46 MB  sha256=efe5cc10bae8
+  monthly 2026-02:  40,320 bars   1.28 MB  sha256=7cfba6395c51
+  monthly 2026-03:  44,640 bars   1.43 MB  sha256=6b77cb4291d9
+  monthly 2026-04:  43,200 bars   1.32 MB  sha256=3db22ae66afa
+  monthly 2026-05:  44,640 bars   1.53 MB  sha256=8d33e3718f8f
+  monthly 2026-06:  43,200 bars   1.58 MB  sha256=f244ce21b9b7
+  monthly 2026-07:  44,640 bars   1.46 MB  sha256=0f1b79e6c535
+  monthly 2026-08:  44,640 bars   1.41 MB  sha256=37003043527f
+  monthly 2026-09:  43,200 bars   1.64 MB  sha256=b7cc729169f9
+  monthly 2026-10:  44,640 bars   1.71 MB  sha256=afce6c321e07
+[NEARUSDT] merged 789,120 bars in 28.7s
+[NEARUSDT] wrote data/binance/NEARUSDT_1m.csv.gz (18.78 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[APTUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.69 MB  sha256=a1982f50534c
+  monthly 2025-06:  43,200 bars   1.60 MB  sha256=c448f24fb401
+  monthly 2025-07:  44,640 bars   1.69 MB  sha256=efe09ff35aa2
+  monthly 2025-08:  44,640 bars   1.66 MB  sha256=cc4b2ee174ca
+  monthly 2025-09:  43,200 bars   1.56 MB  sha256=5cfd64273a3e
+  monthly 2025-10:  44,640 bars   1.68 MB  sha256=3b0d1be672d0
+  monthly 2025-11:  43,200 bars   1.58 MB  sha256=4bb268399a30
+  monthly 2025-12:  44,640 bars   1.52 MB  sha256=53bf5e20c3d6
+  monthly 2026-01:  44,640 bars   1.49 MB  sha256=9fcbe3779cc0
+  monthly 2026-02:  40,320 bars   1.29 MB  sha256=0deae0bd6fa5
+  monthly 2026-03:  44,640 bars   1.38 MB  sha256=24d741c5d0c2
+  monthly 2026-04:  43,200 bars   1.26 MB  sha256=434021f900c2
+  monthly 2026-05:  44,640 bars   1.35 MB  sha256=4f399835ed13
+  monthly 2026-06:  43,200 bars   1.28 MB  sha256=044f78aac01b
+  monthly 2026-07:  44,640 bars   1.10 MB  sha256=7c865fe1db76
+  monthly 2026-08:  44,640 bars   1.09 MB  sha256=cc30bcee30af
+  monthly 2026-09:  43,200 bars   1.46 MB  sha256=0b0b30418364
+  monthly 2026-10:  44,640 bars   1.73 MB  sha256=d649118952fe
+[APTUSDT] merged 789,120 bars in 29.2s
+[APTUSDT] wrote data/binance/APTUSDT_1m.csv.gz (18.29 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[ARBUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.68 MB  sha256=8074a5ba22ea
+  monthly 2025-06:  43,200 bars   1.60 MB  sha256=3f4e6e61d58d
+  monthly 2025-07:  44,640 bars   1.71 MB  sha256=736395425d5d
+  monthly 2025-08:  44,640 bars   1.74 MB  sha256=f40ca57173be
+  monthly 2025-09:  43,200 bars   1.63 MB  sha256=1ded435df922
+  monthly 2025-10:  44,640 bars   1.66 MB  sha256=037f436fd3e3
+  monthly 2025-11:  43,200 bars   1.58 MB  sha256=5fa58dc70051
+  monthly 2025-12:  44,640 bars   1.49 MB  sha256=9c742d408254
+  monthly 2026-01:  44,640 bars   1.48 MB  sha256=f11b6f269b67
+  monthly 2026-02:  40,320 bars   1.35 MB  sha256=84e2ee387590
+  monthly 2026-03:  44,640 bars   1.36 MB  sha256=f496568909fa
+  monthly 2026-04:  43,200 bars   1.33 MB  sha256=4bb0fc58d0e3
+  monthly 2026-05:  44,640 bars   1.38 MB  sha256=8fd999286123
+  monthly 2026-06:  43,200 bars   1.30 MB  sha256=3d0f187162dd
+  monthly 2026-07:  44,640 bars   1.30 MB  sha256=ce4d2ee116a3
+  monthly 2026-08:  44,640 bars   1.21 MB  sha256=cb78c5b6bc90
+  monthly 2026-09:  43,200 bars   1.64 MB  sha256=0541dec20ac2
+  monthly 2026-10:  44,640 bars   1.57 MB  sha256=42a355a354a2
+[ARBUSDT] merged 789,120 bars in 33.4s
+[ARBUSDT] wrote data/binance/ARBUSDT_1m.csv.gz (18.83 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[OPUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.59 MB  sha256=01b5aecde620
+  monthly 2025-06:  43,200 bars   1.42 MB  sha256=ac76de75e3c1
+  monthly 2025-07:  44,640 bars   1.53 MB  sha256=552322c33b70
+  monthly 2025-08:  44,640 bars   1.62 MB  sha256=93ca156d0cfe
+  monthly 2025-09:  43,200 bars   1.68 MB  sha256=ef9b795bdafa
+  monthly 2025-10:  44,640 bars   1.73 MB  sha256=db20b76d7a52
+  monthly 2025-11:  43,200 bars   1.67 MB  sha256=e8475c86fbfb
+  monthly 2025-12:  44,640 bars   1.54 MB  sha256=1f3beb60ea80
+  monthly 2026-01:  44,640 bars   1.59 MB  sha256=524de4276358
+  monthly 2026-02:  40,320 bars   1.46 MB  sha256=2f170f95e52e
+  monthly 2026-03:  44,640 bars   1.42 MB  sha256=3d86080c6cf9
+  monthly 2026-04:  43,200 bars   1.32 MB  sha256=1a7d2c2a01db
+  monthly 2026-05:  44,640 bars   1.42 MB  sha256=877707b5991d
+  monthly 2026-06:  43,200 bars   1.41 MB  sha256=dcfff23c6ef3
+  monthly 2026-07:  44,640 bars   1.21 MB  sha256=66630f3a3946
+  monthly 2026-08:  44,640 bars   1.20 MB  sha256=5f808d9d2b30
+  monthly 2026-09:  43,200 bars   1.53 MB  sha256=8d02365b2285
+  monthly 2026-10:  44,640 bars   1.54 MB  sha256=517f57a8adaa
+[OPUSDT] merged 789,120 bars in 32.1s
+[OPUSDT] wrote data/binance/OPUSDT_1m.csv.gz (18.60 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[INJUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.45 MB  sha256=a697729fed89
+  monthly 2025-06:  43,200 bars   1.37 MB  sha256=10b95ee3a018
+  monthly 2025-07:  44,640 bars   1.46 MB  sha256=118ae09f07d4
+  monthly 2025-08:  44,640 bars   1.44 MB  sha256=da995ffc5d26
+  monthly 2025-09:  43,200 bars   1.28 MB  sha256=c9d97d449ea1
+  monthly 2025-10:  44,640 bars   1.32 MB  sha256=70d021dd026c
+  monthly 2025-11:  43,200 bars   1.31 MB  sha256=a316e5492ad5
+  monthly 2025-12:  44,640 bars   1.28 MB  sha256=d13bb19b8f87
+  monthly 2026-01:  44,640 bars   1.51 MB  sha256=8f7d5c821a4c
+  monthly 2026-02:  40,320 bars   1.34 MB  sha256=873f91dee202
+  monthly 2026-03:  44,640 bars   1.30 MB  sha256=3cba7b410ba9
+  monthly 2026-04:  43,200 bars   1.29 MB  sha256=fa3dd004d09c
+  monthly 2026-05:  44,640 bars   1.63 MB  sha256=9489327e2356
+  monthly 2026-06:  43,200 bars   1.59 MB  sha256=f0524240c23b
+  monthly 2026-07:  44,640 bars   1.48 MB  sha256=b13b6864ed5c
+  monthly 2026-08:  44,640 bars   1.47 MB  sha256=c7ecc4cc85ff
+  monthly 2026-09:  43,200 bars   1.61 MB  sha256=45b53b7ec094
+  monthly 2026-10:  44,640 bars   1.68 MB  sha256=a329e2d0cb85
+[INJUSDT] merged 789,120 bars in 28.8s
+[INJUSDT] wrote data/binance/INJUSDT_1m.csv.gz (18.08 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[SUIUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.90 MB  sha256=56dee1cdc6ba
+  monthly 2025-06:  43,200 bars   1.77 MB  sha256=ee00fa9bfed6
+  monthly 2025-07:  44,640 bars   1.87 MB  sha256=edfbe20645dc
+  monthly 2025-08:  44,640 bars   1.86 MB  sha256=14ecd65f0a72
+  monthly 2025-09:  43,200 bars   1.76 MB  sha256=eecb3c796f78
+  monthly 2025-10:  44,640 bars   1.85 MB  sha256=381a44b46df0
+  monthly 2025-11:  43,200 bars   1.77 MB  sha256=f345c296d1e5
+  monthly 2025-12:  44,640 bars   1.76 MB  sha256=b5b8014e399e
+  monthly 2026-01:  44,640 bars   1.77 MB  sha256=8cd54296c6bb
+  monthly 2026-02:  40,320 bars   1.58 MB  sha256=05f1ebe3cbc7
+  monthly 2026-03:  44,640 bars   1.70 MB  sha256=2a5556b41417
+  monthly 2026-04:  43,200 bars   1.60 MB  sha256=295e0bbcce25
+  monthly 2026-05:  44,640 bars   1.75 MB  sha256=6e68b9dc5bee
+  monthly 2026-06:  43,200 bars   1.66 MB  sha256=175b625fe118
+  monthly 2026-07:  44,640 bars   1.61 MB  sha256=01946778e73f
+  monthly 2026-08:  44,640 bars   1.63 MB  sha256=5371936732f7
+  monthly 2026-09:  43,200 bars   1.74 MB  sha256=ca06dcadeac2
+  monthly 2026-10:  44,640 bars   1.75 MB  sha256=36d1cf5ba9e0
+[SUIUSDT] merged 789,120 bars in 33.4s
+[SUIUSDT] wrote data/binance/SUIUSDT_1m.csv.gz (21.86 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[TIAUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.65 MB  sha256=dd875c0af6ba
+  monthly 2025-06:  43,200 bars   1.52 MB  sha256=942e8200d5a7
+  monthly 2025-07:  44,640 bars   1.64 MB  sha256=d761fb8e53ef
+  monthly 2025-08:  44,640 bars   1.57 MB  sha256=60a514027b7e
+  monthly 2025-09:  43,200 bars   1.46 MB  sha256=f61fb13af73c
+  monthly 2025-10:  44,640 bars   1.51 MB  sha256=2f23712e29d1
+  monthly 2025-11:  43,200 bars   1.47 MB  sha256=a6ed76f7b438
+  monthly 2025-12:  44,640 bars   1.47 MB  sha256=a2449730abb8
+  monthly 2026-01:  44,640 bars   1.69 MB  sha256=85ca9923fd35
+  monthly 2026-02:  40,320 bars   1.45 MB  sha256=553c1d1f2cd5
+  monthly 2026-03:  44,640 bars   1.56 MB  sha256=1b225d1e1d07
+  monthly 2026-04:  43,200 bars   1.47 MB  sha256=d5c7bc6de638
+  monthly 2026-05:  44,640 bars   1.68 MB  sha256=d9e8eee605f1
+  monthly 2026-06:  43,200 bars   1.61 MB  sha256=a93de5f925a2
+  monthly 2026-07:  44,640 bars   1.51 MB  sha256=6dcc3486ca2e
+  monthly 2026-08:  44,640 bars   1.36 MB  sha256=f549e41f7924
+  monthly 2026-09:  43,200 bars   1.60 MB  sha256=4f979e6a6cc3
+  monthly 2026-10:  44,640 bars   1.76 MB  sha256=50f8e9f8e4ce
+[TIAUSDT] merged 789,120 bars in 28.4s
+[TIAUSDT] wrote data/binance/TIAUSDT_1m.csv.gz (19.46 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[FILUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.58 MB  sha256=abcf7dc84d2e
+  monthly 2025-06:  43,200 bars   1.44 MB  sha256=4a5bc11d8f84
+  monthly 2025-07:  44,640 bars   1.57 MB  sha256=23b6a61eda5f
+  monthly 2025-08:  44,640 bars   1.53 MB  sha256=ed42f2770522
+  monthly 2025-09:  43,200 bars   1.45 MB  sha256=d61cb9386f90
+  monthly 2025-10:  44,640 bars   1.55 MB  sha256=890c4aea243f
+  monthly 2025-11:  43,200 bars   1.63 MB  sha256=f18ffcf62589
+  monthly 2025-12:  44,640 bars   1.47 MB  sha256=20c5d401696e
+  monthly 2026-01:  44,640 bars   1.52 MB  sha256=99e6764439dc
+  monthly 2026-02:  40,320 bars   1.30 MB  sha256=27ecdc18e80c
+  monthly 2026-03:  44,640 bars   1.36 MB  sha256=e9e784d34e6d
+  monthly 2026-04:  43,200 bars   1.21 MB  sha256=ac5a598ffcb1
+  monthly 2026-05:  44,640 bars   1.39 MB  sha256=dc999fa22f90
+  monthly 2026-06:  43,200 bars   1.33 MB  sha256=d52ef46f1874
+  monthly 2026-07:  44,640 bars   1.27 MB  sha256=c74ae951ebb1
+  monthly 2026-08:  44,640 bars   1.55 MB  sha256=5e75dfe2e6d6
+  monthly 2026-09:  43,200 bars   1.74 MB  sha256=74fa1e39aad0
+  monthly 2026-10:  44,640 bars   1.76 MB  sha256=fce84931fcc0
+[FILUSDT] merged 789,120 bars in 31.0s
+[FILUSDT] wrote data/binance/FILUSDT_1m.csv.gz (18.47 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[ETCUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.37 MB  sha256=c6a46a3a545c
+  monthly 2025-06:  43,200 bars   1.20 MB  sha256=eefebb7bf107
+  monthly 2025-07:  44,640 bars   1.39 MB  sha256=c7a47adcb423
+  monthly 2025-08:  44,640 bars   1.43 MB  sha256=a73cc96e9bc5
+  monthly 2025-09:  43,200 bars   1.25 MB  sha256=67254fb2ee28
+  monthly 2025-10:  44,640 bars   1.34 MB  sha256=bdccfdee834e
+  monthly 2025-11:  43,200 bars   1.32 MB  sha256=d915c59310b9
+  monthly 2025-12:  44,640 bars   1.14 MB  sha256=2bb80f0fe958
+  monthly 2026-01:  44,640 bars   1.16 MB  sha256=43a3190daf85
+  monthly 2026-02:  40,320 bars   1.04 MB  sha256=10ab69f237ff
+  monthly 2026-03:  44,640 bars   1.01 MB  sha256=6f8522934eaa
+  monthly 2026-04:  43,200 bars   1.01 MB  sha256=dce90aef6921
+  monthly 2026-05:  44,640 bars   1.03 MB  sha256=2f4d75e77e8c
+  monthly 2026-06:  43,200 bars   1.03 MB  sha256=44e660b458b3
+  monthly 2026-07:  44,640 bars   0.92 MB  sha256=243070d1c48d
+  monthly 2026-08:  44,640 bars   0.92 MB  sha256=071c10cd1f0b
+  monthly 2026-09:  43,200 bars   1.13 MB  sha256=a4482ad5b0c9
+  monthly 2026-10:  44,640 bars   1.02 MB  sha256=25b9a85d05d8
+[ETCUSDT] merged 789,120 bars in 32.1s
+[ETCUSDT] wrote data/binance/ETCUSDT_1m.csv.gz (14.72 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[UNIUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.72 MB  sha256=f7f5e8b64b90
+  monthly 2025-06:  43,200 bars   1.71 MB  sha256=3df2bf134e39
+  monthly 2025-07:  44,640 bars   1.79 MB  sha256=0108e803b237
+  monthly 2025-08:  44,640 bars   1.77 MB  sha256=4e99d69c6b0c
+  monthly 2025-09:  43,200 bars   1.61 MB  sha256=f2fc15e0795f
+  monthly 2025-10:  44,640 bars   1.69 MB  sha256=5e3b8f1bd7d0
+  monthly 2025-11:  43,200 bars   1.70 MB  sha256=692e89469dc7
+  monthly 2025-12:  44,640 bars   1.65 MB  sha256=f8ac753e6376
+  monthly 2026-01:  44,640 bars   1.59 MB  sha256=f009c4e2ac09
+  monthly 2026-02:  40,320 bars   1.46 MB  sha256=1e5530eb26ac
+  monthly 2026-03:  44,640 bars   1.51 MB  sha256=6fce02672256
+  monthly 2026-04:  43,200 bars   1.42 MB  sha256=8654f71521c3
+  monthly 2026-05:  44,640 bars   1.52 MB  sha256=179ca1fbf5a4
+  monthly 2026-06:  43,200 bars   1.51 MB  sha256=ca0f71c8ee01
+  monthly 2026-07:  44,640 bars   1.56 MB  sha256=eab7f5dacde4
+  monthly 2026-08:  44,640 bars   1.61 MB  sha256=91c448b59756
+  monthly 2026-09:  43,200 bars   1.75 MB  sha256=5b0a3afcfcde
+  monthly 2026-10:  44,640 bars   1.74 MB  sha256=c668c6f175f3
+[UNIUSDT] merged 789,120 bars in 29.4s
+[UNIUSDT] wrote data/binance/UNIUSDT_1m.csv.gz (20.23 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
+[AAVEUSDT] vision 2025-05-02T00:00:00Z .. 2026-10-31T23:59:59Z
+  monthly 2025-05:  44,640 bars   1.79 MB  sha256=f9eac7885d38
+  monthly 2025-06:  43,200 bars   1.72 MB  sha256=1262ed991ad2
+  monthly 2025-07:  44,640 bars   1.78 MB  sha256=ccf4ce7246a6
+  monthly 2025-08:  44,640 bars   1.77 MB  sha256=99e525e05d9e
+  monthly 2025-09:  43,200 bars   1.65 MB  sha256=97f74d491928
+  monthly 2025-10:  44,640 bars   1.74 MB  sha256=efd628df8010
+  monthly 2025-11:  43,200 bars   1.69 MB  sha256=9a68e6f6c26d
+  monthly 2025-12:  44,640 bars   1.67 MB  sha256=6b9dbbbebbff
+  monthly 2026-01:  44,640 bars   1.62 MB  sha256=a0b7f0301328
+  monthly 2026-02:  40,320 bars   1.52 MB  sha256=285c0f1b6969
+  monthly 2026-03:  44,640 bars   1.63 MB  sha256=7b9839b40a65
+  monthly 2026-04:  43,200 bars   1.60 MB  sha256=ab6924045f34
+  monthly 2026-05:  44,640 bars   1.62 MB  sha256=ac87e26b5dbf
+  monthly 2026-06:  43,200 bars   1.62 MB  sha256=4d5e30996849
+  monthly 2026-07:  44,640 bars   1.66 MB  sha256=ef629a915495
+  monthly 2026-08:  44,640 bars   1.61 MB  sha256=527d0dc5b9b8
+  monthly 2026-09:  43,200 bars   1.65 MB  sha256=90311cd1ffb2
+  monthly 2026-10:  44,640 bars   1.71 MB  sha256=42663803d6ad
+[AAVEUSDT] merged 789,120 bars in 31.5s
+[AAVEUSDT] wrote data/binance/AAVEUSDT_1m.csv.gz (21.05 MB) — 2025-05-02T00:00:00Z .. 2026-10-31T23:59:00Z
 report -> ../reports/fetch_report.json
 ### exit=0
 
 ### data/binance
-total 93M
--rw-r--r-- 1 runner runner 26M Nov  7 10:49 BTCUSDT_1m.csv.gz
--rw-r--r-- 1 runner runner 25M Nov  7 10:50 ETHUSDT_1m.csv.gz
--rw-r--r-- 1 runner runner 22M Nov  7 10:51 SOLUSDT_1m.csv.gz
--rw-r--r-- 1 runner runner 22M Nov  7 10:52 XRPUSDT_1m.csv.gz
+total 459M
+-rw-r--r-- 1 runner runner 21M Nov  7 11:22 AAVEUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 20M Nov  7 11:08 ADAUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:14 APTUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:15 ARBUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 17M Nov  7 11:13 ATOMUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:08 AVAXUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 22M Nov  7 11:04 BNBUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 26M Nov  7 11:02 BTCUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 21M Nov  7 11:07 DOGEUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:10 DOTUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 15M Nov  7 11:20 ETCUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 25M Nov  7 11:03 ETHUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:19 FILUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:17 INJUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:09 LINKUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 20M Nov  7 11:11 LTCUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:13 NEARUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:16 OPUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 22M Nov  7 11:05 SOLUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 21M Nov  7 11:18 SUIUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 19M Nov  7 11:18 TIAUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 18M Nov  7 11:12 TRXUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 20M Nov  7 11:21 UNIUSDT_1m.csv.gz
+-rw-r--r-- 1 runner runner 22M Nov  7 11:06 XRPUSDT_1m.csv.gz
 
 ### fetch_report.json
 {
-  "generated_utc": "2026-11-07T10:49:00Z",
+  "generated_utc": "2026-11-07T11:02:00Z",
   "start": "2025-05-02T00:00:00Z",
   "end": "2026-10-31T23:59:59Z",
   "span_days": 548.0,
@@ -125,6 +565,22 @@ total 93M
       "source": "vision",
       "path": "data/binance/ETHUSDT_1m.csv.gz",
       "bytes": 25398669,
+      "reused_bars": 0,
+      "appended_bars": 789120,
+      "bars": 789120,
+      "span_minutes": 789120,
+      "missing_minutes": 0,
+      "missing_pct": 0.0,
+      "duplicates": 0,
+      "first": "2025-05-02T00:00:00Z",
+      "last": "2026-10-31T23:59:00Z",
+      "largest_holes": [],
+      "invalid": null
+    },
+    "BNBUSDT": {
+      "source": "vision",
+      "path": "data/binance/BNBUSDT_1m.csv.gz",
+      "bytes": 22310471,
       "reused_bars": 0,
       "appended_bars": 789120,
       "bars": 789120,
@@ -168,6 +624,64 @@ total 93M
       "last": "2026-10-31T23:59:00Z",
       "largest_holes": [],
       "invalid": null
-    }
-  }
-}
+    },
+    "DOGEUSDT": {
+      "source": "vision",
+      "path": "data/binance/DOGEUSDT_1m.csv.gz",
+      "bytes": 21787287,
+      "reused_bars": 0,
+      "appended_bars": 789120,
+      "bars": 789120,
+      "span_minutes": 789120,
+      "missing_minutes": 0,
+      "missing_pct": 0.0,
+      "duplicates": 0,
+      "first": "2025-05-02T00:00:00Z",
+      "last": "2026-10-31T23:59:00Z",
+      "largest_holes": [],
+      "invalid": null
+    },
+    "ADAUSDT": {
+      "source": "vision",
+      "path": "data/binance/ADAUSDT_1m.csv.gz",
+      "bytes": 20394507,
+      "reused_bars": 0,
+      "appended_bars": 789120,
+      "bars": 789120,
+      "span_minutes": 789120,
+      "missing_minutes": 0,
+      "missing_pct": 0.0,
+      "duplicates": 0,
+      "first": "2025-05-02T00:00:00Z",
+      "last": "2026-10-31T23:59:00Z",
+      "largest_holes": [],
+      "invalid": null
+    },
+    "AVAXUSDT": {
+      "source": "vision",
+      "path": "data/binance/AVAXUSDT_1m.csv.gz",
+      "bytes": 18706853,
+      "reused_bars": 0,
+      "appended_bars": 789120,
+      "bars": 789120,
+      "span_minutes": 789120,
+      "missing_minutes": 0,
+      "missing_pct": 0.0,
+      "duplicates": 0,
+      "first": "2025-05-02T00:00:00Z",
+      "last": "2026-10-31T23:59:00Z",
+      "largest_holes": [],
+      "invalid": null
+    },
+    "LINKUSDT": {
+      "source": "vision",
+      "path": "data/binance/LINKUSDT_1m.csv.gz",
+      "bytes": 18784996,
+      "reused_bars": 0,
+      "appended_bars": 789120,
+      "bars": 789120,
+      "span_minutes": 789120,
+      "missing_minutes": 0,
+      "missing_pct": 0.0,
+      "duplicates": 0,
+      "fir
