@@ -3,8 +3,8 @@
 ### Exchange reachability from this runner
 ```
 FAIL rest: HTTPError: HTTP Error 451: 
-OK   rest_mirror (0.43s)
-OK   vision_archive (0.15s)
+OK   rest_mirror (0.75s)
+OK   vision_archive (0.64s)
 ```
 
 > ### ✅ Real-data study completed
@@ -15,15 +15,15 @@ Costs: fee +4.0000/+1.0000 bp (taker/maker) · slippage +2.0000 bp · ADV 1.6B (
 
 | configuration | trades | return% | Sharpe | maxDD% | win% | E[R] | PF |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| strategy | 319 | -15.15 | -0.99 | 18.10 | 43.3 | -0.0610 | 0.79 |
-| random_entry_control | 165 | -18.29 | -1.79 | 18.44 | 33.9 | -0.2057 | 0.54 |
-| every_bar_control | 215 | -18.11 | -1.61 | 18.27 | 33.5 | -0.1689 | 0.64 |
+| strategy | 351 | -17.27 | -1.09 | 18.23 | 42.7 | -0.0701 | 0.78 |
+| random_entry_control | 214 | -14.55 | -1.19 | 18.01 | 38.3 | -0.1103 | 0.71 |
+| every_bar_control | 210 | -18.00 | -1.65 | 18.08 | 34.8 | -0.1628 | 0.63 |
 
-**verdict:** `entry_selection_has_edge`
+**verdict:** `exit_logic_dominates_entry_is_decoration`
 
-Decomposition (cash): gross -3,584 − friction 11,570 = net -15,155 · E[R] -0.0610 · n=319
+Decomposition (cash): gross -4,934 − friction 12,335 = net -17,269 · E[R] -0.0701 · n=351
 
-Entry funnel: 1193 signals → 746 fills → 319 positions (fill rate 0.63)
+Entry funnel: 1182 signals → 738 fills → 351 positions (fill rate 0.62)
 
 Accounting errors: **0** (net == gross − costs holds on every trade)
 
@@ -31,48 +31,48 @@ Accounting errors: **0** (net == gross − costs holds on every trade)
 
 | min_edge_score | trades | return% | Sharpe | maxDD% | E[R] |
 |---:|---:|---:|---:|---:|---:|
-| 0.45 | 319 | -15.15 | -0.99 | 18.10 | -0.0610 |
-| 0.6 | 318 | -14.23 | -0.93 | 18.41 | -0.0627 |
-| 0.75 | 192 | +4.56 | +0.38 | 5.85 | +0.0459 |
-| 0.8 | 114 | +3.75 | +0.39 | 3.71 | +0.0552 |
-| 0.85 | 38 | +2.54 | +0.49 | 2.27 | +0.0896 |
+| 0.45 | 351 | -17.27 | -1.09 | 18.23 | -0.0701 |
+| 0.6 | 306 | -16.98 | -1.15 | 18.21 | -0.0864 |
+| 0.75 | 186 | +1.33 | +0.13 | 5.75 | +0.0148 |
+| 0.8 | 111 | +1.36 | +0.16 | 4.39 | +0.0180 |
+| 0.85 | 35 | +2.13 | +0.43 | 1.93 | +0.0663 |
 
 plateau pick: `0.8` (agrees with the best single point: False)
-walk-forward: in-sample Sharpe +0.55 → out-of-sample -0.43 · overfit gap +0.98
-deflated Sharpe: 0.130 (passes 95%: False) · PBO: 0.75 — high: the configuration search was fitting noise — discard the best-in-sample pick
+walk-forward: in-sample Sharpe +0.16 → out-of-sample -0.86 · overfit gap +1.02
+deflated Sharpe: 0.037 (passes 95%: False) · PBO: 0.48 — elevated: a meaningful share of the ranking is selection noise
 
 #### BTCUSDT — filter ablation
 
-baseline: n=319 · E[R] -0.0610 · Sharpe -0.99
+baseline: n=351 · E[R] -0.0701 · Sharpe -1.09
 
 | filter removed | trades | E[R] | Δ E[R] | Δ Sharpe | reading |
 |---|---:|---:|---:|---:|---|
-| trend | 406 | -0.0600 | +0.0010 | +0.10 | review |
-| volatility | 337 | -0.0637 | -0.0027 | +0.03 | review |
-| volume | 346 | -0.0561 | +0.0050 | +0.03 | review |
-| structure | 311 | -0.0622 | -0.0011 | -0.01 | decoration |
-| momentum | 306 | -0.0641 | -0.0030 | -0.02 | decoration |
-| extension | 310 | -0.0637 | -0.0026 | -0.01 | decoration |
-| timing | 417 | -0.0457 | +0.0153 | +0.14 | review |
-| quality | 351 | -0.0551 | +0.0059 | +0.04 | review |
+| trend | 376 | -0.0745 | -0.0044 | +0.03 | review |
+| volatility | 360 | -0.0694 | +0.0006 | +0.06 | review |
+| volume | 346 | -0.0708 | -0.0007 | +0.01 | decoration |
+| structure | 334 | -0.0706 | -0.0006 | -0.01 | decoration |
+| momentum | 336 | -0.0677 | +0.0024 | +0.07 | review |
+| extension | 318 | -0.0798 | -0.0097 | -0.07 | keep |
+| timing | 404 | -0.0562 | +0.0139 | +0.16 | review |
+| quality | 348 | -0.0700 | +0.0001 | +0.01 | decoration |
 
 _Δ is (filter removed) − baseline, so a **negative** Δ E[R] means the filter was earning money; `harmful` means removing it improves the result._
 
 ### ETHUSDT
 
-Costs: fee +4.0000/+1.0000 bp (taker/maker) · slippage +2.0000 bp · ADV 980.1M (measured) · tick 0.01
+Costs: fee +4.0000/+1.0000 bp (taker/maker) · slippage +2.0000 bp · ADV 974.3M (measured) · tick 0.01
 
 | configuration | trades | return% | Sharpe | maxDD% | win% | E[R] | PF |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| strategy | 561 | -16.35 | -0.76 | 18.26 | 44.2 | -0.0425 | 0.87 |
-| random_entry_control | 178 | -18.06 | -1.59 | 18.21 | 36.0 | -0.1870 | 0.60 |
-| every_bar_control | 413 | -16.65 | -0.91 | 18.02 | 42.9 | -0.0716 | 0.82 |
+| strategy | 456 | -17.21 | -0.89 | 18.34 | 43.4 | -0.0601 | 0.84 |
+| random_entry_control | 155 | -17.91 | -1.68 | 18.06 | 38.7 | -0.1875 | 0.57 |
+| every_bar_control | 428 | -18.03 | -0.98 | 18.06 | 42.8 | -0.0772 | 0.81 |
 
 **verdict:** `entry_selection_has_edge`
 
-Decomposition (cash): gross +2,885 − friction 19,235 = net -16,349 · E[R] -0.0425 · n=561
+Decomposition (cash): gross -1,866 − friction 15,344 = net -17,210 · E[R] -0.0601 · n=456
 
-Entry funnel: 1049 signals → 656 fills → 561 positions (fill rate 0.63)
+Entry funnel: 1031 signals → 647 fills → 456 positions (fill rate 0.63)
 
 Accounting errors: **0** (net == gross − costs holds on every trade)
 
@@ -80,48 +80,48 @@ Accounting errors: **0** (net == gross − costs holds on every trade)
 
 | min_edge_score | trades | return% | Sharpe | maxDD% | E[R] |
 |---:|---:|---:|---:|---:|---:|
-| 0.45 | 561 | -16.35 | -0.76 | 18.26 | -0.0425 |
-| 0.6 | 425 | +3.95 | +0.23 | 11.25 | +0.0233 |
-| 0.75 | 198 | -5.10 | -0.35 | 8.23 | -0.0236 |
-| 0.8 | 124 | -3.23 | -0.28 | 9.02 | -0.0222 |
-| 0.85 | 51 | +3.55 | +0.50 | 3.86 | +0.1252 |
+| 0.45 | 456 | -17.21 | -0.89 | 18.34 | -0.0601 |
+| 0.6 | 419 | -0.93 | -0.01 | 10.90 | +0.0012 |
+| 0.75 | 193 | -5.21 | -0.37 | 8.65 | -0.0195 |
+| 0.8 | 124 | -3.37 | -0.29 | 8.78 | -0.0311 |
+| 0.85 | 49 | +3.25 | +0.46 | 3.73 | +0.1113 |
 
 plateau pick: `0.8` (agrees with the best single point: False)
-walk-forward: in-sample Sharpe +0.52 → out-of-sample +0.55 · overfit gap -0.04
-deflated Sharpe: 0.523 (passes 95%: False) · PBO: 0.38 — elevated: a meaningful share of the ranking is selection noise
+walk-forward: in-sample Sharpe +0.22 → out-of-sample -0.01 · overfit gap +0.23
+deflated Sharpe: 0.145 (passes 95%: False) · PBO: 0.34 — elevated: a meaningful share of the ranking is selection noise
 
 #### ETHUSDT — filter ablation
 
-baseline: n=561 · E[R] -0.0425 · Sharpe -0.76
+baseline: n=456 · E[R] -0.0601 · Sharpe -0.89
 
 | filter removed | trades | E[R] | Δ E[R] | Δ Sharpe | reading |
 |---|---:|---:|---:|---:|---|
-| trend | 836 | +0.0018 | +0.0443 | +0.69 | harmful |
-| volatility | 628 | -0.0269 | +0.0156 | +0.19 | review |
-| volume | 564 | -0.0419 | +0.0006 | +0.01 | decoration |
-| structure | 564 | -0.0373 | +0.0052 | +0.10 | review |
-| momentum | 554 | -0.0345 | +0.0080 | +0.14 | review |
-| extension | 499 | -0.0498 | -0.0073 | -0.04 | review |
-| timing | 510 | -0.0457 | -0.0032 | -0.06 | keep |
-| quality | 494 | -0.0508 | -0.0083 | -0.07 | keep |
+| trend | 829 | +0.0047 | +0.0648 | +0.87 | harmful |
+| volatility | 621 | -0.0296 | +0.0305 | +0.28 | harmful |
+| volume | 459 | -0.0600 | +0.0001 | -0.02 | decoration |
+| structure | 485 | -0.0548 | +0.0053 | +0.02 | review |
+| momentum | 540 | -0.0401 | +0.0200 | +0.18 | harmful |
+| extension | 414 | -0.0657 | -0.0056 | -0.06 | keep |
+| timing | 518 | -0.0504 | +0.0096 | +0.03 | review |
+| quality | 437 | -0.0610 | -0.0009 | -0.04 | decoration |
 
 _Δ is (filter removed) − baseline, so a **negative** Δ E[R] means the filter was earning money; `harmful` means removing it improves the result._
 
 ### SOLUSDT
 
-Costs: fee +4.0000/+1.0000 bp (taker/maker) · slippage +2.0000 bp · ADV 458.4M (measured) · tick 0.01
+Costs: fee +4.0000/+1.0000 bp (taker/maker) · slippage +2.0000 bp · ADV 458.1M (measured) · tick 0.01
 
 | configuration | trades | return% | Sharpe | maxDD% | win% | E[R] | PF |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| strategy | 465 | +11.77 | +0.58 | 7.86 | 51.6 | +0.0688 | 1.11 |
-| random_entry_control | 372 | -17.40 | -1.01 | 18.32 | 43.8 | -0.1005 | 0.80 |
-| every_bar_control | 444 | -15.87 | -0.97 | 18.16 | 45.9 | -0.1227 | 0.82 |
+| strategy | 460 | +4.68 | +0.26 | 7.33 | 50.9 | +0.0395 | 1.05 |
+| random_entry_control | 311 | -16.78 | -1.05 | 18.06 | 44.1 | -0.0865 | 0.78 |
+| every_bar_control | 454 | -14.00 | -0.76 | 18.15 | 46.7 | -0.0871 | 0.86 |
 
 **verdict:** `entry_selection_has_edge`
 
-Decomposition (cash): gross +29,436 − friction 17,662 = net +11,773 · E[R] +0.0688 · n=465
+Decomposition (cash): gross +20,995 − friction 16,316 = net +4,679 · E[R] +0.0395 · n=460
 
-Entry funnel: 885 signals → 526 fills → 465 positions (fill rate 0.59)
+Entry funnel: 853 signals → 516 fills → 460 positions (fill rate 0.60)
 
 Accounting errors: **0** (net == gross − costs holds on every trade)
 
@@ -129,52 +129,52 @@ Accounting errors: **0** (net == gross − costs holds on every trade)
 
 | min_edge_score | trades | return% | Sharpe | maxDD% | E[R] |
 |---:|---:|---:|---:|---:|---:|
-| 0.45 | 465 | +11.77 | +0.58 | 7.86 | +0.0688 |
-| 0.6 | 319 | +14.34 | +0.84 | 9.54 | +0.1022 |
-| 0.75 | 126 | +4.30 | +0.44 | 3.59 | +0.0967 |
-| 0.8 | 70 | +5.42 | +0.72 | 1.56 | +0.1657 |
-| 0.85 | 26 ⚠️ | +5.85 | +1.40 | 1.10 | +0.3915 |
+| 0.45 | 460 | +4.68 | +0.26 | 7.33 | +0.0395 |
+| 0.6 | 310 | +10.16 | +0.62 | 8.52 | +0.0717 |
+| 0.75 | 118 | +2.13 | +0.23 | 3.26 | +0.0584 |
+| 0.8 | 66 | +4.63 | +0.63 | 1.85 | +0.1581 |
+| 0.85 | 25 ⚠️ | +5.80 | +1.42 | 1.09 | +0.4071 |
 
 plateau pick: `0.8` (agrees with the best single point: False)
-walk-forward: in-sample Sharpe +1.91 → out-of-sample -0.23 · overfit gap +2.14
-deflated Sharpe: 0.030 (passes 95%: False) · PBO: 0.41 — elevated: a meaningful share of the ranking is selection noise
+walk-forward: in-sample Sharpe +1.65 → out-of-sample +1.31 · overfit gap +0.34
+deflated Sharpe: 0.967 (passes 95%: True) · PBO: 0.23 — elevated: a meaningful share of the ranking is selection noise
 
 > ⚠️ **1 of 5 grid points have n < 30** (0.85). Their Sharpe values are noise. The CLI computes the plateau, walk-forward and PBO over **all** grid points, so those three readings just above are contaminated by these rows — read the filtered pick below instead.
 
-> **plateau pick over the 4 grid points with n ≥ 30: `0.75`** (best single point `0.6`, agrees: False, spikes: [])
+> **plateau pick over the 4 grid points with n ≥ 30: `0.75`** (best single point `0.8`, agrees: False, spikes: [0.6, 0.8])
 
 #### SOLUSDT — filter ablation
 
-baseline: n=465 · E[R] +0.0688 · Sharpe +0.58
+baseline: n=460 · E[R] +0.0395 · Sharpe +0.26
 
 | filter removed | trades | E[R] | Δ E[R] | Δ Sharpe | reading |
 |---|---:|---:|---:|---:|---|
-| trend | 710 | +0.0782 | +0.0094 | +0.09 | review |
-| volatility | 523 | +0.0848 | +0.0160 | +0.20 | review |
-| volume | 467 | +0.0659 | -0.0029 | -0.04 | decoration |
-| structure | 458 | +0.0722 | +0.0034 | +0.04 | decoration |
-| momentum | 447 | +0.0516 | -0.0172 | -0.22 | keep |
-| extension | 473 | +0.0713 | +0.0025 | +0.05 | decoration |
-| timing | 573 | +0.0615 | -0.0073 | -0.11 | keep |
-| quality | 470 | +0.0694 | +0.0006 | +0.02 | decoration |
+| trend | 690 | +0.0479 | +0.0085 | -0.03 | review |
+| volatility | 520 | +0.0555 | +0.0160 | +0.21 | review |
+| volume | 461 | +0.0364 | -0.0030 | -0.04 | decoration |
+| structure | 451 | +0.0426 | +0.0031 | +0.04 | decoration |
+| momentum | 440 | +0.0308 | -0.0087 | -0.14 | keep |
+| extension | 471 | +0.0397 | +0.0002 | +0.03 | decoration |
+| timing | 558 | +0.0448 | +0.0053 | +0.00 | review |
+| quality | 464 | +0.0373 | -0.0022 | -0.01 | decoration |
 
 _Δ is (filter removed) − baseline, so a **negative** Δ E[R] means the filter was earning money; `harmful` means removing it improves the result._
 
 ### XRPUSDT
 
-Costs: fee +4.0000/+1.0000 bp (taker/maker) · slippage +2.0000 bp · ADV 216.2M (measured) · tick 0.0001
+Costs: fee +4.0000/+1.0000 bp (taker/maker) · slippage +2.0000 bp · ADV 213.7M (measured) · tick 0.0001
 
 | configuration | trades | return% | Sharpe | maxDD% | win% | E[R] | PF |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| strategy | 530 | +1.72 | +0.12 | 14.30 | 48.1 | +0.0233 | 1.02 |
-| random_entry_control | 317 | -18.11 | -1.17 | 18.22 | 40.1 | -0.1323 | 0.74 |
-| every_bar_control | 318 | -16.11 | -0.94 | 18.16 | 43.4 | -0.1026 | 0.78 |
+| strategy | 532 | +1.30 | +0.10 | 15.78 | 48.3 | +0.0220 | 1.01 |
+| random_entry_control | 230 | -18.19 | -1.39 | 18.19 | 41.3 | -0.1400 | 0.67 |
+| every_bar_control | 162 | -17.13 | -1.50 | 18.57 | 43.2 | -0.1832 | 0.61 |
 
 **verdict:** `entry_selection_has_edge`
 
-Decomposition (cash): gross +21,547 − friction 19,829 = net +1,718 · E[R] +0.0233 · n=530
+Decomposition (cash): gross +21,199 − friction 19,902 = net +1,297 · E[R] +0.0220 · n=532
 
-Entry funnel: 937 signals → 588 fills → 530 positions (fill rate 0.63)
+Entry funnel: 941 signals → 591 fills → 532 positions (fill rate 0.63)
 
 Accounting errors: **0** (net == gross − costs holds on every trade)
 
@@ -182,34 +182,34 @@ Accounting errors: **0** (net == gross − costs holds on every trade)
 
 | min_edge_score | trades | return% | Sharpe | maxDD% | E[R] |
 |---:|---:|---:|---:|---:|---:|
-| 0.45 | 530 | +1.72 | +0.12 | 14.30 | +0.0233 |
-| 0.6 | 370 | +10.35 | +0.59 | 5.95 | +0.0568 |
-| 0.75 | 124 | +9.19 | +0.82 | 5.18 | +0.1382 |
-| 0.8 | 52 | +0.56 | +0.09 | 5.73 | +0.0877 |
-| 0.85 | 15 ⚠️ | +1.86 | +0.70 | 1.08 | +0.3383 |
+| 0.45 | 532 | +1.30 | +0.10 | 15.78 | +0.0220 |
+| 0.6 | 364 | +13.29 | +0.74 | 5.85 | +0.0669 |
+| 0.75 | 121 | +8.42 | +0.75 | 5.18 | +0.1355 |
+| 0.8 | 52 | +0.40 | +0.07 | 5.60 | +0.0762 |
+| 0.85 | 18 ⚠️ | +1.22 | +0.38 | 1.64 | +0.2097 |
 
 plateau pick: `0.8` (agrees with the best single point: False)
-walk-forward: in-sample Sharpe +0.78 → out-of-sample +0.77 · overfit gap +0.01
-deflated Sharpe: 0.581 (passes 95%: False) · PBO: 0.86 — high: the configuration search was fitting noise — discard the best-in-sample pick
+walk-forward: in-sample Sharpe +0.88 → out-of-sample +0.66 · overfit gap +0.22
+deflated Sharpe: 0.709 (passes 95%: False) · PBO: 0.72 — high: the configuration search was fitting noise — discard the best-in-sample pick
 
 > ⚠️ **1 of 5 grid points have n < 30** (0.85). Their Sharpe values are noise. The CLI computes the plateau, walk-forward and PBO over **all** grid points, so those three readings just above are contaminated by these rows — read the filtered pick below instead.
 
-> **plateau pick over the 4 grid points with n ≥ 30: `0.6`** (best single point `0.75`, agrees: False, spikes: [0.75])
+> **plateau pick over the 4 grid points with n ≥ 30: `0.6`** (best single point `0.75`, agrees: False, spikes: [])
 
 #### XRPUSDT — filter ablation
 
-baseline: n=530 · E[R] +0.0233 · Sharpe +0.12
+baseline: n=532 · E[R] +0.0220 · Sharpe +0.10
 
 | filter removed | trades | E[R] | Δ E[R] | Δ Sharpe | reading |
 |---|---:|---:|---:|---:|---|
-| trend | 766 | +0.0235 | +0.0002 | -0.00 | review |
-| volatility | 562 | +0.0332 | +0.0099 | +0.09 | review |
-| volume | 540 | +0.0255 | +0.0022 | +0.04 | decoration |
-| structure | 524 | +0.0122 | -0.0111 | -0.16 | keep |
-| momentum | 505 | +0.0288 | +0.0055 | +0.07 | review |
-| extension | 541 | +0.0266 | +0.0033 | +0.03 | decoration |
-| timing | 636 | +0.0499 | +0.0266 | +0.35 | harmful |
-| quality | 541 | +0.0232 | -0.0001 | +0.01 | decoration |
+| trend | 767 | +0.0063 | -0.0157 | -0.26 | keep |
+| volatility | 567 | +0.0356 | +0.0136 | +0.14 | review |
+| volume | 539 | +0.0233 | +0.0013 | +0.04 | decoration |
+| structure | 525 | +0.0148 | -0.0072 | -0.09 | keep |
+| momentum | 503 | +0.0243 | +0.0023 | +0.03 | review |
+| extension | 541 | +0.0249 | +0.0030 | +0.02 | decoration |
+| timing | 633 | +0.0556 | +0.0336 | +0.46 | harmful |
+| quality | 541 | +0.0218 | -0.0001 | +0.03 | decoration |
 
 _Δ is (filter removed) − baseline, so a **negative** Δ E[R] means the filter was earning money; `harmful` means removing it improves the result._
 
@@ -217,15 +217,15 @@ _Δ is (filter removed) − baseline, so a **negative** Δ E[R] means the filter
 
 | symbol | trades | return% | maxDD% | win% | E[R] | gross$ | friction$ | net$ |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| BTCUSDT | 319 | -15.15 | 18.10 | 43.3 | -0.0610 | -3,584 | 11,570 | -15,155 |
-| ETHUSDT | 561 | -16.35 | 18.26 | 44.2 | -0.0425 | +2,885 | 19,235 | -16,349 |
-| SOLUSDT | 465 | +11.77 | 7.86 | 51.6 | +0.0688 | +29,436 | 17,662 | +11,773 |
-| XRPUSDT | 530 | +1.72 | 14.30 | 48.1 | +0.0233 | +21,547 | 19,829 | +1,718 |
-| **pooled** | **1875** | — | — | — | **+0.0006** | **+50,284** | **68,296** | **-18,013** |
+| BTCUSDT | 351 | -17.27 | 18.23 | 42.7 | -0.0701 | -4,934 | 12,335 | -17,269 |
+| ETHUSDT | 456 | -17.21 | 18.34 | 43.4 | -0.0601 | -1,866 | 15,344 | -17,210 |
+| SOLUSDT | 460 | +4.68 | 7.33 | 50.9 | +0.0395 | +20,995 | 16,316 | +4,679 |
+| XRPUSDT | 532 | +1.30 | 15.78 | 48.3 | +0.0220 | +21,199 | 19,902 | +1,297 |
+| **pooled** | **1799** | — | — | — | **-0.0123** | **+35,394** | **63,897** | **-28,503** |
 
-Signals 4064 → fills 2516 → positions 1875 · accounting errors **0** · friction ÷ gross = 1.36
+Signals 4007 → fills 2492 → positions 1799 · accounting errors **0** · friction ÷ gross = 1.81
 
-> ✅ **pooled n = 1875 ≥ 569** — the study now has 80% power to detect a 0.10R per-trade edge, so the pooled E[R] can be read as evidence and not only as description. The individual symbols still cannot.
+> ✅ **pooled n = 1799 ≥ 569** — the study now has 80% power to detect a 0.10R per-trade edge, so the pooled E[R] can be read as evidence and not only as description. The individual symbols still cannot.
 
 > positive E[R] in 2 of 4 symbols (SOLUSDT, XRPUSDT). An edge that appears in only one symbol is a symbol-specific story, not an edge.
 
