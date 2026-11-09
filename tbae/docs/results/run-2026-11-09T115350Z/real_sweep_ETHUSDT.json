@@ -1,0 +1,245 @@
+{
+  "param": "min_edge_score",
+  "grid": [
+    0.45,
+    0.6,
+    0.75,
+    0.8,
+    0.85
+  ],
+  "rows": [
+    {
+      "label": "min_edge_score=0.45",
+      "value": 0.45,
+      "trades": 441,
+      "return_pct": -17.208742224825766,
+      "sharpe": -0.916919213590279,
+      "max_dd_pct": 18.198815936881424,
+      "expectancy_r": -0.06007740888658628
+    },
+    {
+      "label": "min_edge_score=0.6",
+      "value": 0.6,
+      "trades": 423,
+      "return_pct": -1.4851928923263331,
+      "sharpe": -0.04130990328872621,
+      "max_dd_pct": 11.526577721855677,
+      "expectancy_r": 0.002520440827775363
+    },
+    {
+      "label": "min_edge_score=0.75",
+      "value": 0.75,
+      "trades": 198,
+      "return_pct": -5.405211255455695,
+      "sharpe": -0.3847033310016245,
+      "max_dd_pct": 9.30321007298356,
+      "expectancy_r": -0.023257571923977115
+    },
+    {
+      "label": "min_edge_score=0.8",
+      "value": 0.8,
+      "trades": 126,
+      "return_pct": -3.9369950034825303,
+      "sharpe": -0.35042053231710263,
+      "max_dd_pct": 9.63809092042753,
+      "expectancy_r": -0.03221079364257691
+    },
+    {
+      "label": "min_edge_score=0.85",
+      "value": 0.85,
+      "trades": 53,
+      "return_pct": 3.257053831903773,
+      "sharpe": 0.44304477977102746,
+      "max_dd_pct": 3.9805859038781937,
+      "expectancy_r": 0.10243072958287146
+    }
+  ],
+  "plateau": {
+    "chosen": 0.8,
+    "chosen_score": -0.35042053231710263,
+    "chosen_neighbour_mean": 0.029170724384701474,
+    "chosen_is_spike": false,
+    "best_point_value": 0.85,
+    "best_point_score": 0.44304477977102746,
+    "agrees": false,
+    "candidate_pool": "interior_non_spike",
+    "n_interior_candidates": 3,
+    "rows": [
+      {
+        "value": 0.45,
+        "score": -0.916919213590279,
+        "neighbour_mean": -0.04130990328872621,
+        "neighbour_min": -0.04130990328872621,
+        "stability": 0.04505293669981415,
+        "is_spike": false,
+        "full_window": false
+      },
+      {
+        "value": 0.6,
+        "score": -0.04130990328872621,
+        "neighbour_mean": -0.6508112722959517,
+        "neighbour_min": -0.916919213590279,
+        "stability": 22.196111358133177,
+        "is_spike": false,
+        "full_window": true
+      },
+      {
+        "value": 0.75,
+        "score": -0.3847033310016245,
+        "neighbour_mean": -0.1958652178029144,
+        "neighbour_min": -0.35042053231710263,
+        "stability": 0.9108851004870111,
+        "is_spike": false,
+        "full_window": true
+      },
+      {
+        "value": 0.8,
+        "score": -0.35042053231710263,
+        "neighbour_mean": 0.029170724384701474,
+        "neighbour_min": -0.3847033310016245,
+        "stability": 1.0978333046235393,
+        "is_spike": false,
+        "full_window": true
+      },
+      {
+        "value": 0.85,
+        "score": 0.44304477977102746,
+        "neighbour_mean": -0.35042053231710263,
+        "neighbour_min": -0.35042053231710263,
+        "stability": -0.7909370526794278,
+        "is_spike": true,
+        "full_window": false
+      }
+    ]
+  },
+  "walk_forward": {
+    "folds": [
+      {
+        "fold": 0,
+        "train": [
+          0,
+          4329
+        ],
+        "test": [
+          4346,
+          8691
+        ],
+        "best_config": "min_edge_score=0.85",
+        "is_score": -0.52088114154313,
+        "oos_score": 1.5088978398792148,
+        "oos_return_pct": -1.8238078540286806,
+        "oos_max_dd_pct": 2.011760333348045,
+        "oos_n_trades": 0,
+        "is_rank_of_oos_best": 1,
+        "n_configs": 5
+      },
+      {
+        "fold": 1,
+        "train": [
+          0,
+          8675
+        ],
+        "test": [
+          8692,
+          13037
+        ],
+        "best_config": "min_edge_score=0.6",
+        "is_score": 0.40124790060922383,
+        "oos_score": 2.2114171627331367,
+        "oos_return_pct": 2.401560402003633,
+        "oos_max_dd_pct": 5.3761261809678995,
+        "oos_n_trades": 0,
+        "is_rank_of_oos_best": 2,
+        "n_configs": 5
+      },
+      {
+        "fold": 2,
+        "train": [
+          0,
+          13021
+        ],
+        "test": [
+          13038,
+          17383
+        ],
+        "best_config": "min_edge_score=0.6",
+        "is_score": 0.5666650620295386,
+        "oos_score": 0.9057231262860933,
+        "oos_return_pct": -3.3507763855601946,
+        "oos_max_dd_pct": 7.401102220730514,
+        "oos_n_trades": 0,
+        "is_rank_of_oos_best": 3,
+        "n_configs": 5
+      },
+      {
+        "fold": 3,
+        "train": [
+          0,
+          17367
+        ],
+        "test": [
+          17384,
+          21729
+        ],
+        "best_config": "min_edge_score=0.85",
+        "is_score": 0.34047431200541733,
+        "oos_score": 1.9594503323413293,
+        "oos_return_pct": 1.6969545441492873,
+        "oos_max_dd_pct": 0.7982335284023026,
+        "oos_n_trades": 0,
+        "is_rank_of_oos_best": 0,
+        "n_configs": 5
+      },
+      {
+        "fold": 4,
+        "train": [
+          0,
+          21713
+        ],
+        "test": [
+          21730,
+          26077
+        ],
+        "best_config": "min_edge_score=0.85",
+        "is_score": 0.5416579509323324,
+        "oos_score": 0.0,
+        "oos_return_pct": -0.36717962660035575,
+        "oos_max_dd_pct": 0.3778847009061223,
+        "oos_n_trades": 0,
+        "is_rank_of_oos_best": 4,
+        "n_configs": 5
+      }
+    ],
+    "oos_sharpe": -0.10092061098613363,
+    "is_sharpe_mean": 0.2658328168066764,
+    "overfit_gap": 0.36675342779281006,
+    "oos_return_pct": -1.5486899044948155,
+    "oos_max_dd_pct": 7.401102220730479,
+    "periods_per_year": 8766.0,
+    "n_configs_tried": 5,
+    "deflated_sharpe": {
+      "dsr": 0.1579268539258999,
+      "sr0": 0.005729877910028746,
+      "sr_observed": -0.0010779016530932234,
+      "n_obs": 21732,
+      "n_trials": 5,
+      "sr_std": 0.0048045503351936865,
+      "skew": 0.9866800668984342,
+      "kurtosis": 114.7209255431731,
+      "reliable": true,
+      "reason": "",
+      "pass_95": false
+    },
+    "pbo": {
+      "pbo": 0.296875,
+      "n_splits": 16,
+      "n_combos_evaluated": 64,
+      "n_configs": 5,
+      "logit_mean": 0.6789816193081362,
+      "logit_median": 0.6931471805599452,
+      "logit_stdev": 1.088233034538878,
+      "reliable": true,
+      "interpretation": "elevated: a meaningful share of the ranking is selection noise"
+    }
+  }
+}
