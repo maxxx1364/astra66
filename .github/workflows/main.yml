@@ -44,6 +44,24 @@ on:
         description: "Download real data (slower)"
         type: boolean
         default: true
+      commission_bps:
+        description: "Taker fee per side (bp) — venue/VIP dependent"
+        default: "2"
+      maker_bps:
+        description: "Maker fee per side (bp)"
+        default: "1"
+      slippage_bps:
+        description: "Declared slippage per taker fill (bp)"
+        default: "2"
+      stop_mode:
+        description: "Stop mode (sigma | structure | sigma_structure_max)"
+        default: "sigma"
+      stop_sigma:
+        description: "Stop width in sigma multiples"
+        default: "4.4"
+      min_score:
+        description: "min_edge_score for compare/ablation runs"
+        default: "0.45"
 
 concurrency:
   group: backtest-${{ github.ref }}
@@ -72,6 +90,19 @@ env:
   TF: ${{ github.event.inputs.tf || '60' }}
   WINDOW: ${{ github.event_name == 'pull_request' && '14' || (github.event.inputs.window || '90') }}
   SEEDS_SYNTH: ${{ github.event_name == 'pull_request' && '4' || '20' }}
+  # Cost/geometry levers.  The defaults encode what the cost-attribution study
+  # measured (RESEARCH.md §3-4): a 4.4σ stop cuts friction per R by ~26-35%
+  # versus 2.2σ, and a 2 bp taker tier (VIP/futures-like) moves the best
+  # configuration from break-even (+0.004R at 4 bp) to +0.019R.  They are
+  # inputs, not constants, so a dispatch can re-run the same study at any fee
+  # tier without editing this file.  min_edge_score stays at 0.45 for the
+  # compare/ablation baseline — the sweep covers the stricter thresholds.
+  COMMISSION_BPS: ${{ github.event.inputs.commission_bps || '2' }}
+  MAKER_BPS: ${{ github.event.inputs.maker_bps || '1' }}
+  SLIPPAGE_BPS: ${{ github.event.inputs.slippage_bps || '2' }}
+  STOP_MODE: ${{ github.event.inputs.stop_mode || 'sigma' }}
+  STOP_SIGMA: ${{ github.event.inputs.stop_sigma || '4.4' }}
+  MIN_SCORE: ${{ github.event.inputs.min_score || '0.45' }}
 
 jobs:
   # ---------------------------------------------------------------- tests ---
@@ -132,6 +163,10 @@ jobs:
       - name: Entry A/B against controls
         run: |
           python -m app.cli compare --tf "$TF" --days "$WINDOW" --seed 7 \
+            --commission-bps "$COMMISSION_BPS" --maker-bps "$MAKER_BPS" \
+            --slippage-bps "$SLIPPAGE_BPS" \
+            --stop-mode "$STOP_MODE" --stop-sigma "$STOP_SIGMA" \
+            --min-score "$MIN_SCORE" \
             --json ../reports/synthetic_compare.json
         working-directory: tbae
 
@@ -139,6 +174,8 @@ jobs:
         run: |
           python scripts/cost_attribution.py \
             --seeds "$SEEDS_SYNTH" --days "$WINDOW" --tf "$TF" \
+            --commission-bps "$COMMISSION_BPS" --maker-bps "$MAKER_BPS" \
+            --slippage-bps "$SLIPPAGE_BPS" \
             --n-boot 1000 --json ../reports/synthetic_cost_attribution.json
         working-directory: tbae
 
@@ -352,15 +389,19 @@ jobs:
           for SYM in $(echo "$SYMBOLS" | tr ',' ' '); do
             eval "CSV=\$PATH_${SYM}"
             if [ -z "$CSV" ] || [ ! -s "$CSV" ]; then echo "skip $SYM (no data file)"; continue; fi
+            COST_ARGS="--commission-bps $COMMISSION_BPS --maker-bps $MAKER_BPS \
+              --slippage-bps $SLIPPAGE_BPS \
+              --stop-mode $STOP_MODE --stop-sigma $STOP_SIGMA \
+              --min-score $MIN_SCORE"
             echo "=== $SYM: compare vs controls ==="
-            python -m app.cli compare --feed "csv:$CSV" --tf "$TF" \
+            python -m app.cli compare --feed "csv:$CSV" --tf "$TF" $COST_ARGS \
               --json "../reports/real_compare_${SYM}.json" || status=1
             echo "=== $SYM: confirmation-threshold sweep ==="
-            python -m app.cli sweep --feed "csv:$CSV" --tf "$TF" \
+            python -m app.cli sweep --feed "csv:$CSV" --tf "$TF" $COST_ARGS \
               --param min_edge_score --grid 0.45,0.6,0.75,0.8,0.85 \
               --json "../reports/real_sweep_${SYM}.json" || status=1
             echo "=== $SYM: filter ablation ==="
-            python -m app.cli ablation --feed "csv:$CSV" --tf "$TF" \
+            python -m app.cli ablation --feed "csv:$CSV" --tf "$TF" $COST_ARGS \
               --json "../reports/real_ablation_${SYM}.json" || status=1
           done
           exit $status
@@ -662,8 +703,13 @@ jobs:
       # gives a permanent, diffable history of every run.  Pushes made with the
       # built-in GITHUB_TOKEN do not trigger a new workflow run, so this cannot
       # loop; the [skip ci] trailer is belt-and-braces for forks and mirrors.
+      # On main this feeds docs/results/ and LATEST.md as before.  On any other
+      # branch (a dispatch against a PR branch) the same report is committed to
+      # THAT branch, so a parameter experiment's numbers are readable without
+      # signing in to the run page — artifacts and job summaries are both
+      # behind authentication, and the job summary is truncated in the logs.
       - name: Publish report to the repository
-        if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+        if: ${{ always() && github.event_name != 'pull_request' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -678,22 +724,27 @@ jobs:
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch --depth=1 origin main
-          git checkout -B main origin/main
+          BRANCH="${GITHUB_REF_NAME}"
+          git fetch --depth=1 origin "$BRANCH"
+          git checkout -B "$BRANCH" "origin/$BRANCH"
           stamp=$(date -u +%Y-%m-%dT%H%M%SZ)
           dest="tbae/docs/results/run-${stamp}"
           mkdir -p "$dest"
           cp reports/REAL_DATA_SUMMARY.md "$dest/SUMMARY.md" 2>/dev/null || true
           cp reports/real_*.json "$dest/" 2>/dev/null || true
           cp reports/data_qc.json reports/reachability.txt "$dest/" 2>/dev/null || true
-          cp reports/REAL_DATA_SUMMARY.md tbae/docs/results/LATEST.md 2>/dev/null || true
+          # LATEST.md is the main study's pointer; branch runs are experiments
+          # and must not pretend to be it.
+          if [ "$BRANCH" = "main" ]; then
+            cp reports/REAL_DATA_SUMMARY.md tbae/docs/results/LATEST.md 2>/dev/null || true
+          fi
           git add tbae/docs/results
           if git diff --cached --quiet; then
             echo "report unchanged — nothing to commit"
             exit 0
           fi
           git commit -m "research: real-data report ${stamp} [skip ci]"
-          git push origin main
+          git push origin "$BRANCH"
         working-directory: "."
 
       - uses: actions/upload-artifact@v4

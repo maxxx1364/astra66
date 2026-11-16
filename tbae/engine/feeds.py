@@ -318,11 +318,13 @@ def _parse_ts(raw: str) -> int:
     raw = raw.strip()
     if not raw:
         raise ValueError("empty timestamp")
-    # epoch ms / s
+    # epoch us / ms / s
     try:
         v = float(raw)
-        if v > 1e14:
+        if v > 1e17:
             raise ValueError("timestamp out of range")
+        if v > 1e14:          # microseconds — Binance vision monthly archives
+            return int(v / 1000)    # switched to us open_time from 2025-01
         if v > 1e11:          # milliseconds
             return int(v)
         if v > 1e9:           # seconds
