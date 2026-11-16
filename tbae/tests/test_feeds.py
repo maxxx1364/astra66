@@ -205,6 +205,19 @@ class TestCsvFeed:
         assert len(bars) == 2, "a duplicated minute must not become two bars"
         assert len(CsvFeed(path, drop_duplicates=False).load()) == 3
 
+    def test_microsecond_timestamps_are_read_as_milliseconds(self, tmp_path):
+        # Binance vision monthly archives write open_time in MICROSECONDS from
+        # 2025-01 (e.g. 1735689600000000 = 2025-01-01).  Reading one of those
+        # used to raise "unrecognised timestamp format" and killed the whole
+        # fetch of any range touching 2025.
+        path = str(tmp_path / "micro.csv")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("ts,open,high,low,close,volume\n")
+            fh.write("1735689600000000,1,2,0.5,1.5,10\n")
+            fh.write("1735689660000000,1.5,2.5,1.4,2.0,11\n")
+        bars = CsvFeed(path).load()
+        assert [b.ts for b in bars] == [1735689600000, 1735689660000]
+
     def test_unsorted_rows_are_sorted_by_timestamp(self, tmp_path):
         path = str(tmp_path / "unsorted.csv")
         with open(path, "w", encoding="utf-8") as fh:
