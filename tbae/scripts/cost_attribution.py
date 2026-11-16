@@ -52,6 +52,7 @@ from engine import metrics as metrics_mod                        # noqa: E402
 from engine import pipeline, signals as S, validation            # noqa: E402
 from engine.exits import ExitConfig                              # noqa: E402
 from engine.mathx import mean, stdev                             # noqa: E402
+from engine.risk import CostConfig, RiskConfig                   # noqa: E402
 
 #: exit geometries worth comparing.  ``wide`` widens the stop, which shrinks
 #: friction *per R* mechanically because R is defined by the stop distance;
@@ -80,13 +81,16 @@ def _ci(xs: Sequence[float], n_boot: int, seed: int) -> tuple[float, float]:
 
 
 def collect(seed: int, days: int, tf: int, min_score: float, geom: str,
-            maker_targets: bool, cache: dict[int, Any]) -> dict[str, Any]:
+            maker_targets: bool, cache: dict[int, Any],
+            costs: CostConfig | None = None) -> dict[str, Any]:
     if seed not in cache:
         cache[seed] = pipeline.run(days=days, seed=seed, tf=tf)
     res = cache[seed]
+    rcfg = RiskConfig(costs=costs) if costs is not None else None
     r = BT.run_backtest(
         res, signal_cfg=S.SignalConfig(min_edge_score=min_score),
-        exit_cfg=GEOMETRIES[geom], cohort_curves=res.stats.get("cohort_curves", {}),
+        exit_cfg=GEOMETRIES[geom], risk_cfg=rcfg,
+        cohort_curves=res.stats.get("cohort_curves", {}),
         bt_cfg=BT.BacktestConfig(target_exits_are_maker=maker_targets))
     eq = r.equity_curve
     start = eq[0].equity if eq else 0.0
@@ -153,6 +157,12 @@ def main() -> int:
                     help="comma-separated exit geometries")
     ap.add_argument("--taker-targets", action="store_true",
                     help="charge target legs as taker (conservative fill model)")
+    ap.add_argument("--commission-bps", type=float, default=4.0,
+                    help="taker fee per side, bp (venue/VIP-tier dependent)")
+    ap.add_argument("--maker-bps", type=float, default=1.0,
+                    help="maker fee per side, bp")
+    ap.add_argument("--slippage-bps", type=float, default=2.0,
+                    help="declared slippage per taker fill, bp")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--json", default="", help="write the raw pooled stats here")
     a = ap.parse_args()
@@ -161,9 +171,13 @@ def main() -> int:
     thrs = [float(x) for x in a.thresholds.split(",") if x.strip()]
     geoms = [g.strip() for g in a.geometries.split(",") if g.strip()]
     maker = not a.taker_targets
+    costs = CostConfig(commission_bps=a.commission_bps, maker_bps=a.maker_bps,
+                       slippage_bps=a.slippage_bps)
 
     print(f"cost attribution — {len(seeds)} independent {a.days}-day windows "
-          f"@{a.tf}m, targets={'maker' if maker else 'taker'}")
+          f"@{a.tf}m, targets={'maker' if maker else 'taker'}, "
+          f"fees {a.commission_bps:g}/{a.maker_bps:g} bp (taker/maker), "
+          f"slippage {a.slippage_bps:g} bp")
     print(f"pooled over {len(seeds) * len(thrs) * len(geoms)} runs; "
           f"bootstrap n={a.n_boot}\n")
     hdr = (f"{'thr':>5s} {'exit geometry':24s} | {'n':>5s} | {'grossR':>7s} "
@@ -176,10 +190,13 @@ def main() -> int:
     cache: dict[int, Any] = {}
     for thr in thrs:
         for geom in geoms:
-            runs = [collect(sd, a.days, a.tf, thr, geom, maker, cache) for sd in seeds]
+            runs = [collect(sd, a.days, a.tf, thr, geom, maker, cache, costs)
+                    for sd in seeds]
             p = pooled(runs, a.n_boot, seed=1)
             p.update({"threshold": thr, "geometry": geom, "targets": "maker" if maker
-                      else "taker"})
+                      else "taker",
+                      "commission_bps": a.commission_bps, "maker_bps": a.maker_bps,
+                      "slippage_bps": a.slippage_bps})
             out.append(p)
             if not p.get("n"):
                 print(f"{thr:5.2f} {geom:24s} |     0 | (no trades)")
