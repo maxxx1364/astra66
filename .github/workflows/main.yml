@@ -703,8 +703,13 @@ jobs:
       # gives a permanent, diffable history of every run.  Pushes made with the
       # built-in GITHUB_TOKEN do not trigger a new workflow run, so this cannot
       # loop; the [skip ci] trailer is belt-and-braces for forks and mirrors.
+      # On main this feeds docs/results/ and LATEST.md as before.  On any other
+      # branch (a dispatch against a PR branch) the same report is committed to
+      # THAT branch, so a parameter experiment's numbers are readable without
+      # signing in to the run page — artifacts and job summaries are both
+      # behind authentication, and the job summary is truncated in the logs.
       - name: Publish report to the repository
-        if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+        if: ${{ always() && github.event_name != 'pull_request' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -719,22 +724,27 @@ jobs:
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch --depth=1 origin main
-          git checkout -B main origin/main
+          BRANCH="${GITHUB_REF_NAME}"
+          git fetch --depth=1 origin "$BRANCH"
+          git checkout -B "$BRANCH" "origin/$BRANCH"
           stamp=$(date -u +%Y-%m-%dT%H%M%SZ)
           dest="tbae/docs/results/run-${stamp}"
           mkdir -p "$dest"
           cp reports/REAL_DATA_SUMMARY.md "$dest/SUMMARY.md" 2>/dev/null || true
           cp reports/real_*.json "$dest/" 2>/dev/null || true
           cp reports/data_qc.json reports/reachability.txt "$dest/" 2>/dev/null || true
-          cp reports/REAL_DATA_SUMMARY.md tbae/docs/results/LATEST.md 2>/dev/null || true
+          # LATEST.md is the main study's pointer; branch runs are experiments
+          # and must not pretend to be it.
+          if [ "$BRANCH" = "main" ]; then
+            cp reports/REAL_DATA_SUMMARY.md tbae/docs/results/LATEST.md 2>/dev/null || true
+          fi
           git add tbae/docs/results
           if git diff --cached --quiet; then
             echo "report unchanged — nothing to commit"
             exit 0
           fi
           git commit -m "research: real-data report ${stamp} [skip ci]"
-          git push origin main
+          git push origin "$BRANCH"
         working-directory: "."
 
       - uses: actions/upload-artifact@v4
