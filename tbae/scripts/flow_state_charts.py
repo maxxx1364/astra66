@@ -33,9 +33,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from engine.flow_state import STATE_COLORS, STATES                   # noqa: E402
 
 BG, PANEL, FG, GRID = "#121417", "#181B1F", "#D7DADF", "#2A2E35"
-NAMES = {"weak": "weak (range, white)", "medium": "medium (range, yellow)",
-         "trend": "normal trend (green)", "strong": "strong", "pressure": "pressure",
-         "explosive": "explosive", "max": "max", "unready": "no reference"}
+NAMES = {"quiet": "quiet: low vol, balanced (yellow)", "balanced": "balanced: vol, no side (white)",
+         "trend": "trend (green)", "strong": "strong", "pressure": "pressure",
+         "absorption": "absorption", "explosive": "explosive", "max": "max", "unready": "no reference"}
+ORDER = ["quiet", "balanced", "trend", "strong", "pressure", "absorption", "explosive", "max"]
+VOL_C, PRICE_C = "#3FC1E0", "#FF9F43"
 
 
 def style(ax) -> None:
@@ -49,12 +51,12 @@ def style(ax) -> None:
 
 def chart(sample: dict, title: str, path: str, tf: int, block: int) -> None:
     bars, line, blocks = sample["bars"], sample["line"], sample["blocks"]
-    t = [dt.datetime.utcfromtimestamp(b["ts"] / 1000) for b in bars]
+    t = [dt.datetime.fromtimestamp(b["ts"] / 1000, dt.timezone.utc) for b in bars]
     x = list(range(len(bars)))
     idx = {b["ts"]: i for i, b in enumerate(bars)}
-    fig, (a1, a2) = plt.subplots(2, 1, figsize=(15, 8.2), sharex=True,
-                                 gridspec_kw={"height_ratios": [2.3, 1]}, facecolor=BG)
-    style(a1); style(a2)
+    fig, (a1, a2, a3) = plt.subplots(3, 1, figsize=(15, 10.5), sharex=True,
+                                     gridspec_kw={"height_ratios": [2.3, 1, 1]}, facecolor=BG)
+    style(a1); style(a2); style(a3)
     # block shading
     for blk in blocks:
         i0 = idx.get(blk["ts"])
@@ -96,14 +98,28 @@ def chart(sample: dict, title: str, path: str, tf: int, block: int) -> None:
     a2.set_ylim(min(ys + [-60]) * 1.1, max(ys + [60]) * 1.1)
     for lvl, ls in ((0, "-"), (20, ":"), (-20, ":"), (55, "--"), (-55, "--")):
         a2.axhline(lvl, color="#6B7280", linewidth=0.7, linestyle=ls)
-    a2.set_ylabel(f"weighted delta %\n({block}-bar mean)")
+    a2.set_ylabel(f"weighted delta %\n(last {block} bars)")
+    # effort vs result: two parallel lines on one percentage scale
+    vx = [i for i, l in enumerate(line) if l.get("vol_line") is not None]
+    vv = [min(line[i]["vol_line"], 160) for i in vx]
+    pv = [min(line[i]["price_line"], 160) for i in vx]
+    a3.plot(vx, vv, color=VOL_C, linewidth=1.5, label="volume % (effort)")
+    a3.plot(vx, pv, color=PRICE_C, linewidth=1.5, label="price move % (result)")
+    a3.fill_between(vx, vv, pv, where=[a > b for a, b in zip(vv, pv)], color=VOL_C, alpha=0.12, lw=0)
+    a3.fill_between(vx, vv, pv, where=[a <= b for a, b in zip(vv, pv)], color=PRICE_C, alpha=0.12, lw=0)
+    for lvl in (20, 55, 100):
+        a3.axhline(lvl, color="#6B7280", linewidth=0.7, linestyle=":")
+    a3.set_ylim(0, 165)
+    a3.set_ylabel("effort vs result\n(%, clipped at 160)")
+    leg3 = a3.legend(loc="upper left", fontsize=7.5, frameon=False, ncol=2)
+    for txt in leg3.get_texts():
+        txt.set_color(FG)
     step = max(1, len(x) // 10)
-    a2.set_xticks(x[::step])
-    a2.set_xticklabels([t[i].strftime("%m-%d %H:%M") for i in x[::step]], rotation=0)
-    a2.set_xlim(-1, len(x))
-    handles = [Patch(color=STATE_COLORS[s], label=NAMES[s]) for s in
-               ("weak", "medium", "trend", "strong", "pressure", "explosive", "max")]
-    leg = a1.legend(handles=handles, loc="upper left", ncol=7, fontsize=7.5, frameon=False)
+    a3.set_xticks(x[::step])
+    a3.set_xticklabels([t[i].strftime("%m-%d %H:%M") for i in x[::step]], rotation=0)
+    a3.set_xlim(-1, len(x))
+    handles = [Patch(color=STATE_COLORS[s], label=NAMES[s]) for s in ORDER]
+    leg = a1.legend(handles=handles, loc="upper left", ncol=4, fontsize=7.5, frameon=False)
     for txt in leg.get_texts():
         txt.set_color(FG)
     fig.text(0.01, 0.005, f"{tf}m candles · state per {block}-bar block ({tf * block}m) · "
@@ -151,7 +167,7 @@ def summary(study: dict, path: str) -> None:
     P = study["pooled"]["60"]["regime"]
     regs = ["range", "mixed", "trend"]
     bottom = [0.0] * 3
-    for s in ["weak", "medium", "trend", "strong", "pressure", "explosive", "max"]:
+    for s in ORDER:
         vals = [next(r["rate"] for r in P[rg] if r["state"] == s) * 100 for rg in regs]
         axes[2].bar(regs, vals, bottom=bottom, color=STATE_COLORS[s], edgecolor=BG, linewidth=0.5, label=s)
         bottom = [b + v for b, v in zip(bottom, vals)]

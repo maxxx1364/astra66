@@ -50,6 +50,9 @@ PIVOT_K = 2            # blocks on each side confirming a swing
 ER_N = 6               # blocks in the efficiency ratio
 HOLD_N = 3             # closes that must stay beyond a broken level
 FOLLOW_N = 6           # blocks over which break follow-through is measured
+EFFORT_KEYS = ["vol>>price", "vol>price", "equal", "price>vol", "price>>vol",
+               "cross|volume_crosses_up", "cross|price_crosses_up", "cross|none",
+               "both_high", "both_low"]
 
 
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
@@ -179,6 +182,8 @@ def study_blocks(blocks: Sequence[fs.FlowBlock], cfg: fs.FlowConfig) -> dict[str
             if ready[i - 1]:
                 brk.add("prev|" + B[i - 1].state, holds, follow)
             agree = sgn(B[i].delta) == side
+            brk.add("effort|" + ("vol_above_price" if B[i].vol_pct >= B[i].move_pct else "price_above_vol"),
+                    holds, follow)
             brk.add("delta_agrees" if agree else "delta_disagrees", holds, follow)
     res["breaks"] = brk
 
@@ -197,6 +202,40 @@ def study_blocks(blocks: Sequence[fs.FlowBlock], cfg: fs.FlowConfig) -> dict[str
             nxt.add("revert|" + st, sgn(nm) == -m, -m * nm / atr[i])
         nxt.add("absmove|" + st, abs(nm) > atr[i], abs(nm) / atr[i])
     res["next"] = nxt
+
+    # 7 effort (volume%) vs result (move%) ---------------------------------
+    # spread = vol% - move%: > 0 effort without result, < 0 result without effort.
+    # A cross is a block whose spread sign differs from the previous ready block's.
+    er = Counter2()
+    prev_sp = None
+    for i in range(ATR_N, n - PIVOT_K):
+        if not ready[i] or atr[i] is None or atr[i] <= 0:
+            prev_sp = None
+            continue
+        sp = B[i].vol_pct - B[i].move_pct
+        bucket = ("vol>>price" if sp >= 40 else "vol>price" if sp >= 10 else
+                  "equal" if sp > -10 else "price>vol" if sp > -40 else "price>>vol")
+        if prev_sp is None:
+            cross = "none"
+        elif prev_sp < 0 <= sp:
+            cross = "volume_crosses_up"
+        elif prev_sp >= 0 > sp:
+            cross = "price_crosses_up"
+        else:
+            cross = "none"
+        prev_sp = sp
+        win = [j for j in range(i - PIVOT_K, i + PIVOT_K + 1) if j != i]
+        pivot = all(B[i].high > B[j].high for j in win) or all(B[i].low < B[j].low for j in win)
+        nm = B[i + 1].close - B[i + 1].open
+        m = sgn(B[i].move)
+        both = "both_high" if B[i].vol_pct >= 55 and B[i].move_pct >= 55 else \
+               "both_low" if B[i].vol_pct < 20 and B[i].move_pct < 20 else None
+        for key in [bucket, "cross|" + cross] + ([both] if both else []):
+            er.add("pivot|" + key, pivot)
+            er.add("bigmove|" + key, abs(nm) > atr[i], abs(nm) / atr[i])
+            if m:
+                er.add("revert|" + key, sgn(nm) == -m, -m * nm / atr[i])
+    res["effort"] = er
     return res
 
 
@@ -236,11 +275,16 @@ def tables(res: dict[str, Counter2]) -> dict[str, Any]:
             "by_state": [dict(state=s, **r) for s, r in zip(S, res["breaks"].rows(["state|" + s for s in S]))],
             "by_prev_state": [dict(state=s, **r) for s, r in zip(S, res["breaks"].rows(["prev|" + s for s in S]))],
             "by_delta": res["breaks"].rows(["delta_agrees", "delta_disagrees"]),
+            "by_effort": res["breaks"].rows(["effort|vol_above_price", "effort|price_above_vol"]),
         },
         "next": {
             "flow": [dict(state=s, **r) for s, r in zip(S, res["next"].rows(["flow|" + s for s in S]))],
             "revert": [dict(state=s, **r) for s, r in zip(S, res["next"].rows(["revert|" + s for s in S]))],
             "absmove": [dict(state=s, **r) for s, r in zip(S, res["next"].rows(["absmove|" + s for s in S]))],
+        },
+        "effort": {
+            kind: res["effort"].rows([kind + "|" + k for k in EFFORT_KEYS])
+            for kind in ("pivot", "bigmove", "revert")
         },
     }
     return out

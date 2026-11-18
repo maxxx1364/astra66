@@ -26,20 +26,31 @@ States
 ------
 States are assigned per **block** of ``block`` consecutive chart bars (4 by
 default: a 1h chart is read in 4h blocks, a 5m chart in 20m blocks), aligned to
-clock boundaries.  First match wins:
+clock boundaries.  Three levels are read on every axis: weak (< ``weak``),
+medium, strong (>= ``big``).  Delta is *balanced* when ``|delta%| < weak``.
+A balanced block can never be a trend.  First match wins:
 
-    1 max        vol%  >= max_level                               (beyond the trimmed reference)
-    2 explosive  volume < trailing mean volume AND move% >= big   (thin, fast move; often reverses)
-    3 pressure   vol%  >= big AND |delta%| < weak                 (heavy two-sided volume, no net side)
-    4 strong     |delta%| >= big AND price agrees with delta
-    5 trend      |delta%| >= weak AND >= trend_consistency bars share the delta's sign
-                 AND price agrees                                  (gentle, sloped, normal trend)
-    6 weak       |delta%| <  weak                                  (quiet range)
-    7 medium     otherwise                                         (active but two-sided range)
+    1 max         vol% >= max_level                          beyond the trimmed reference
+    2 explosive   volume < trailing mean AND move% >= big    thin, fast move
+    -- balanced delta (buyers ~ sellers) ------------------------------------
+    3 pressure    vol% >= big                                heavy two-sided fight
+    4 balanced    vol% >= weak                               white: real volume, no side wins
+    5 quiet       otherwise                                  yellow: little volume, little move
+    -- one-sided delta -------------------------------------------------------
+    6 strong      price followed the delta (move% >= weak) AND vol% >= big
+    7 trend       price followed the delta, volume weak or medium   green
+    8 absorption  price did not follow the delta             the aggressive side was absorbed
 
-Colours follow the user's scheme: the two range states are white (weak) and
-yellow (medium), the gentle trend is green, strong is blue, pressure purple,
-explosive orange and max red.
+Colours: quiet yellow, balanced white, trend green, strong blue, pressure
+purple, absorption pink, explosive orange, max red.
+
+Effort vs result
+----------------
+:func:`effort_result_lines` gives two parallel lines on one percentage scale:
+**volume%** (effort) and **move%** (result) over the last ``block`` bars.  Both
+high = strong; both low = quiet; volume above price = effort without result
+(pressure/absorption); price above volume = result without effort (explosive).
+Where they cross is where the market changes between those regimes.
 
 Causality
 ---------
@@ -58,28 +69,30 @@ from typing import Any, Sequence
 
 from .reference import build_reference
 
-STATES = ("max", "explosive", "pressure", "strong", "trend", "weak", "medium")
+STATES = ("max", "explosive", "pressure", "balanced", "quiet", "strong", "trend", "absorption")
 
-#: The user's colour scheme: ranges white/yellow, gentle trend green.
+#: The user's colour scheme: balanced-delta ranges white/yellow, gentle trend green.
 STATE_COLORS = {
-    "weak": "#F2F2F2",
-    "medium": "#F5C518",
+    "quiet": "#F5C518",
+    "balanced": "#F2F2F2",
     "trend": "#2E9E44",
     "strong": "#1F5FD1",
     "pressure": "#7B3FB8",
+    "absorption": "#E26FA8",
     "explosive": "#F07C1A",
     "max": "#D3242B",
     "unready": "#9AA0A6",
 }
 
 STATE_LABELS_FA = {
-    "weak": "ضعیف (رنج آرام)",
-    "medium": "متوسط (رنج فعال)",
-    "trend": "روند نرمال",
-    "strong": "قوی",
-    "pressure": "پرفشار",
-    "explosive": "انفجاری",
-    "max": "مکس",
+    "quiet": "زرد: حجم و حرکت ضعیف، دلتای برابر",
+    "balanced": "سفید: حجم بالا، حرکت ضعیف، دلتای برابر",
+    "trend": "سبز: روند نرمال",
+    "strong": "آبی: قوی",
+    "pressure": "بنفش: پرفشار",
+    "absorption": "صورتی: جذب",
+    "explosive": "نارنجی: انفجاری",
+    "max": "قرمز: مکس",
     "unready": "بدون مرجع",
 }
 
@@ -97,16 +110,12 @@ class FlowConfig:
     weak: float = 20.0
     big: float = 55.0
     max_level: float = 100.0
-    #: bars inside a block that must share the delta's sign for 'trend'
-    trend_consistency: int = 3
 
     def validate(self) -> "FlowConfig":
         if self.block < 1:
             raise ValueError("block must be >= 1")
         if not 0.0 < self.weak < self.big < self.max_level:
             raise ValueError("need 0 < weak < big < max_level")
-        if not 1 <= self.trend_consistency <= self.block:
-            raise ValueError("trend_consistency must be in [1, block]")
         if self.min_reference_blocks < 2:
             raise ValueError("min_reference_blocks must be >= 2")
         return self
@@ -142,6 +151,9 @@ class FlowBlock:
     move_pct: float | None = None
     mean_volume: float | None = None
     consistency: int = 0
+    ref_volume: float | None = None
+    ref_delta: float | None = None
+    ref_move: float | None = None
     state: str = "unready"
 
     @property
@@ -226,21 +238,20 @@ def classify_block(blk: FlowBlock, cfg: FlowConfig) -> str:
     if blk.vol_pct is None or blk.delta_pct is None or blk.move_pct is None:
         return "unready"
     vp, dp, mp = blk.vol_pct, blk.delta_pct, blk.move_pct
-    adp = abs(dp)
-    price_agrees = (blk.move > 0 and dp > 0) or (blk.move < 0 and dp < 0)
     if vp >= cfg.max_level:
         return "max"
     if blk.mean_volume is not None and blk.volume < blk.mean_volume and mp >= cfg.big:
         return "explosive"
-    if vp >= cfg.big and adp < cfg.weak:
-        return "pressure"
-    if adp >= cfg.big and price_agrees:
-        return "strong"
-    if adp >= cfg.weak and price_agrees and blk.consistency >= cfg.trend_consistency:
-        return "trend"
-    if adp < cfg.weak:
-        return "weak"
-    return "medium"
+    if abs(dp) < cfg.weak:                       # balanced: never a trend
+        if vp >= cfg.big:
+            return "pressure"
+        if vp >= cfg.weak:
+            return "balanced"
+        return "quiet"
+    followed = mp >= cfg.weak and ((blk.move > 0 and dp > 0) or (blk.move < 0 and dp < 0))
+    if followed:
+        return "strong" if vp >= cfg.big else "trend"
+    return "absorption"
 
 
 def _trimmed_mean(values: Sequence[float], share: float) -> float:
@@ -285,6 +296,7 @@ def annotate(blocks: Sequence[FlowBlock], tf: int, cfg: FlowConfig | None = None
         blk.delta_pct = 100.0 * blk.delta / ref_delta
         blk.move_pct = 100.0 * abs(blk.move) / ref_move
         blk.mean_volume = mean_vol
+        blk.ref_volume, blk.ref_delta, blk.ref_move = ref_vol, ref_delta, ref_move
         sign = 1 if blk.delta > 0 else -1 if blk.delta < 0 else 0
         blk.consistency = sum(1 for d in blk.bar_deltas if sign and (d > 0) == (sign > 0) and d != 0)
         blk.state = classify_block(blk, cfg)
@@ -293,30 +305,70 @@ def annotate(blocks: Sequence[FlowBlock], tf: int, cfg: FlowConfig | None = None
 
 def bar_line(bars: Sequence[FlowBar], blocks: Sequence[FlowBlock], tf: int,
              cfg: FlowConfig | None = None) -> list[dict[str, Any]]:
-    """The indicator line: per chart bar, the mean delta% of the last ``block``
-    bars (bar delta scaled by the block's reference / block), coloured by the
-    state of the block the bar belongs to."""
+    """Per chart bar: the delta%, volume% and move% of the last ``block`` bars
+    (a rolling block, so the value equals the block's own at each block close),
+    each scaled by the reference of the block the bar belongs to, plus that
+    block's state for colouring.
+
+    ``line`` is the signed delta line; ``vol_line`` and ``price_line`` are the
+    two effort-vs-result lines.
+    """
     cfg = cfg or FlowConfig()
     ms = tf * 60_000 * cfg.block
     by_ts = {b.ts: b for b in blocks}
     out: list[dict[str, Any]] = []
-    window: list[float] = []
-    for b in bars:
+    for i, b in enumerate(bars):
         blk = by_ts.get((b.ts // ms) * ms)
-        if blk is None or blk.delta_pct is None or blk.delta == 0:
-            scale = None
-        else:
-            scale = blk.delta_pct / blk.delta      # 100 / ref_delta of that block
-        pct = b.delta * scale * cfg.block if scale is not None else None
-        if pct is not None:
-            window.append(pct)
-            if len(window) > cfg.block:
-                window.pop(0)
+        lo = max(0, i - cfg.block + 1)
+        win = bars[lo:i + 1]
+        ok = blk is not None and blk.ref_volume and blk.ref_delta and blk.ref_move and len(win) == cfg.block
         out.append({
             "ts": b.ts, "close": b.close,
-            "line": (sum(window) / len(window)) if (pct is not None and window) else None,
+            "line": 100.0 * sum(w.delta for w in win) / blk.ref_delta if ok else None,
+            "vol_line": 100.0 * sum(w.volume for w in win) / blk.ref_volume if ok else None,
+            "price_line": 100.0 * abs(b.close - win[0].open) / blk.ref_move if ok else None,
             "state": blk.state if blk is not None else "unready",
         })
+    return out
+
+
+def effort_result_lines(bars: Sequence[FlowBar], blocks: Sequence[FlowBlock], tf: int,
+                        cfg: FlowConfig | None = None) -> list[dict[str, Any]]:
+    """The two-line indicator: volume% (effort) and move% (result) per bar."""
+    return [{"ts": p["ts"], "volume": p["vol_line"], "price": p["price_line"], "state": p["state"]}
+            for p in bar_line(bars, blocks, tf, cfg)]
+
+
+def states_for_bars(bars: Sequence[Any], cfg: FlowConfig | None = None) -> list[str]:
+    """For each chart bar, the state of the last block that had **closed** by
+    that bar's close — what a strategy deciding on that bar could know.
+
+    ``bars`` are engine :class:`~engine.models.Bar` objects (or anything with
+    ts/tf/open/high/low/close/volume/taker_buy_volume).  A bar that ends its
+    block sees that block; any other bar sees the block before.
+    """
+    cfg = (cfg or FlowConfig()).validate()
+    if not bars:
+        return []
+    tf = int(getattr(bars[0], "tf", 0) or 0)
+    if tf <= 0:
+        raise ValueError("bars must carry their timeframe in .tf")
+    fbars = [FlowBar(ts=b.ts, open=float(b.open), high=float(b.high), low=float(b.low),
+                     close=float(b.close), volume=float(b.volume or 0.0),
+                     delta=2.0 * float(getattr(b, "taker_buy_volume", 0.0) or 0.0) - float(b.volume or 0.0))
+             for b in bars]
+    blocks = annotate(flow_blocks(fbars, tf, cfg.block), tf, cfg)
+    span = tf * 60_000 * cfg.block
+    by_ts = {blk.ts: blk for blk in blocks}
+    out: list[str] = []
+    for b in fbars:
+        key = (b.ts // span) * span
+        blk = by_ts.get(key)
+        if blk is not None and b.ts + tf * 60_000 == key + span and blk.n_bars == cfg.block:
+            out.append(blk.state)                   # this bar closes its block
+        else:
+            prev = by_ts.get(key - span)
+            out.append(prev.state if prev is not None and prev.n_bars == cfg.block else "unready")
     return out
 
 
@@ -328,5 +380,6 @@ def state_shares(blocks: Sequence[FlowBlock]) -> dict[str, float]:
 
 __all__ = [
     "STATES", "STATE_COLORS", "STATE_LABELS_FA", "FlowConfig", "FlowBar", "FlowBlock",
-    "flow_bars", "flow_blocks", "classify_block", "annotate", "bar_line", "state_shares",
+    "flow_bars", "flow_blocks", "classify_block", "annotate", "bar_line",
+    "effort_result_lines", "states_for_bars", "state_shares",
 ]

@@ -4,8 +4,13 @@
 //|                                                                  |
 //| Line   : mean weighted-delta % of the last InpBlock bars.        |
 //| Colour : state of the block (InpBlock bars: H1 -> 4h, M5 -> 20m) |
-//|          weak=white, medium=yellow (ranges), trend=green,        |
-//|          strong=blue, pressure=purple, explosive=orange, max=red |
+//|  balanced delta (never a trend):                                 |
+//|     quiet=yellow (low volume), balanced=white (more volume),     |
+//|     pressure=purple (strong volume)                              |
+//|  one-sided delta: trend=green (price followed, vol weak/medium), |
+//|     strong=blue (price followed, strong volume),                 |
+//|     absorption=pink (price did not follow the delta)             |
+//|  explosive=orange (thin volume, big move), max=red               |
 //|                                                                  |
 //| Weighted delta: every tick counts by its size.                   |
 //|   * exchange feeds with buy/sell flags: +volume / -volume;       |
@@ -27,7 +32,7 @@
 #property indicator_plots   1
 #property indicator_label1  "Flow state"
 #property indicator_type1   DRAW_COLOR_LINE
-#property indicator_color1  clrWhiteSmoke,clrGold,clrLimeGreen,clrDodgerBlue,clrDarkViolet,clrDarkOrange,clrRed,clrDimGray
+#property indicator_color1  clrGold,clrWhiteSmoke,clrLimeGreen,clrDodgerBlue,clrDarkViolet,clrHotPink,clrDarkOrange,clrRed,clrDimGray
 #property indicator_style1  STYLE_SOLID
 #property indicator_width1  2
 #property indicator_level1  0
@@ -52,21 +57,21 @@ input int               InpMinRefBlocks     = 60;    // blocks before a referenc
 input double            InpWeak             = 20.0;  // weak threshold, %
 input double            InpBig              = 55.0;  // big threshold, %
 input double            InpMaxLevel         = 100.0; // vol% at/above = max
-input int               InpTrendConsistency = 3;     // bars sharing the delta sign for "trend"
 input ENUM_DELTA_SOURCE InpDeltaSource      = DELTA_TICKS;
 input int               InpMaxBars          = 5000;  // history bars to compute
 
 //--- state indexes = colour indexes above
-#define ST_WEAK      0
-#define ST_MEDIUM    1
-#define ST_TREND     2
-#define ST_STRONG    3
-#define ST_PRESSURE  4
-#define ST_EXPLOSIVE 5
-#define ST_MAX       6
-#define ST_UNREADY   7
+#define ST_QUIET      0
+#define ST_BALANCED   1
+#define ST_TREND      2
+#define ST_STRONG     3
+#define ST_PRESSURE   4
+#define ST_ABSORPTION 5
+#define ST_EXPLOSIVE  6
+#define ST_MAX        7
+#define ST_UNREADY    8
 
-string StateName[8] = {"weak","medium","trend","strong","pressure","explosive","max","no reference"};
+string StateName[9] = {"quiet","balanced","trend","strong","pressure","absorption","explosive","max","no reference"};
 
 double LineBuf[];
 double ColorBuf[];
@@ -170,25 +175,26 @@ void ComputeBarFlow(int i, const datetime &time[], const double &open[], const d
    gHave[i] = true;
   }
 
-int Classify(const Block &b, double volPct, double deltaPct, double movePct, double meanVol, int consistency)
+int Classify(const Block &b, double volPct, double deltaPct, double movePct, double meanVol)
   {
-   double adp = MathAbs(deltaPct);
    double mv = b.close - b.open;
-   bool agrees = (mv > 0.0 && deltaPct > 0.0) || (mv < 0.0 && deltaPct < 0.0);
    if(volPct >= InpMaxLevel) return ST_MAX;
    if(b.vol < meanVol && movePct >= InpBig) return ST_EXPLOSIVE;
-   if(volPct >= InpBig && adp < InpWeak) return ST_PRESSURE;
-   if(adp >= InpBig && agrees) return ST_STRONG;
-   if(adp >= InpWeak && agrees && consistency >= InpTrendConsistency) return ST_TREND;
-   if(adp < InpWeak) return ST_WEAK;
-   return ST_MEDIUM;
+   if(MathAbs(deltaPct) < InpWeak)                 // balanced delta: never a trend
+     {
+      if(volPct >= InpBig)  return ST_PRESSURE;
+      if(volPct >= InpWeak) return ST_BALANCED;
+      return ST_QUIET;
+     }
+   bool followed = movePct >= InpWeak && ((mv > 0.0 && deltaPct > 0.0) || (mv < 0.0 && deltaPct < 0.0));
+   if(followed) return volPct >= InpBig ? ST_STRONG : ST_TREND;
+   return ST_ABSORPTION;
   }
 
 //+------------------------------------------------------------------+
 int OnInit()
   {
-   if(InpBlock < 1 || InpTrendConsistency < 1 || InpTrendConsistency > InpBlock ||
-      !(InpWeak > 0 && InpWeak < InpBig && InpBig < InpMaxLevel))
+   if(InpBlock < 1 || !(InpWeak > 0 && InpWeak < InpBig && InpBig < InpMaxLevel))
       return INIT_PARAMETERS_INCORRECT;
    SetIndexBuffer(0, LineBuf, INDICATOR_DATA);
    SetIndexBuffer(1, ColorBuf, INDICATOR_COLOR_INDEX);
@@ -272,12 +278,8 @@ int OnCalculate(const int rates_total, const int prev_calculated,
       double volPct = 100.0 * gBlocks[b].vol / refVol;
       double delPct = 100.0 * gBlocks[b].delta / refDel;
       double movPct = 100.0 * MathAbs(gBlocks[b].close - gBlocks[b].open) / refMov;
-      int sgn = gBlocks[b].delta > 0.0 ? 1 : (gBlocks[b].delta < 0.0 ? -1 : 0);
-      int cons = 0;
-      for(int i = gBlocks[b].first; i <= gBlocks[b].last; i++)
-         if(sgn != 0 && gDelta[i] != 0.0 && ((gDelta[i] > 0.0) == (sgn > 0))) cons++;
       gBlocks[b].refDelta = refDel;
-      gBlocks[b].state = Classify(gBlocks[b], volPct, delPct, movPct, meanVol, cons);
+      gBlocks[b].state = Classify(gBlocks[b], volPct, delPct, movPct, meanVol);
      }
 
    // line: mean of the last InpBlock bar delta %, coloured by the bar's block

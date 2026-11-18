@@ -74,17 +74,26 @@ class TestClassification:
         b = _blk(300, 2, 0.5, vol_pct=70, delta_pct=5, move_pct=10)
         assert fs.classify_block(b, self.cfg) == "pressure"
 
-    def test_strong_and_trend_need_price_to_agree_with_delta(self):
-        assert fs.classify_block(_blk(150, 80, 6, vol_pct=40, delta_pct=70, move_pct=40), self.cfg) == "strong"
-        assert fs.classify_block(_blk(150, 80, -6, vol_pct=40, delta_pct=70, move_pct=40), self.cfg) == "medium"
+    def test_balanced_delta_splits_by_volume_and_is_never_a_trend(self):
+        # yellow: weak volume; white: more volume; pressure: strong volume
+        assert fs.classify_block(_blk(80, 3, 1, vol_pct=12, delta_pct=8, move_pct=10), self.cfg) == "quiet"
+        assert fs.classify_block(_blk(150, 3, 1, vol_pct=40, delta_pct=8, move_pct=10), self.cfg) == "balanced"
+        assert fs.classify_block(_blk(300, 3, 1, vol_pct=70, delta_pct=8, move_pct=10), self.cfg) == "pressure"
+        # even a sizeable price move cannot make a balanced block a trend
+        for vp in (12, 40, 70):
+            st = fs.classify_block(_blk(150, 3, 4, vol_pct=vp, delta_pct=8, move_pct=45), self.cfg)
+            assert st not in ("trend", "strong")
+
+    def test_one_sided_delta_with_price_following_is_trend_or_strong(self):
+        assert fs.classify_block(_blk(80, 30, 3, vol_pct=12, delta_pct=30, move_pct=30), self.cfg) == "trend"
         assert fs.classify_block(_blk(150, 30, 3, vol_pct=40, delta_pct=30, move_pct=30), self.cfg) == "trend"
+        assert fs.classify_block(_blk(300, 80, 6, vol_pct=70, delta_pct=70, move_pct=40), self.cfg) == "strong"
 
-    def test_trend_needs_consistent_bars(self):
-        b = _blk(150, 30, 3, vol_pct=40, delta_pct=30, move_pct=30, consistency=2)
-        assert fs.classify_block(b, self.cfg) == "medium"
-
-    def test_quiet_two_sided_flow_is_weak(self):
-        assert fs.classify_block(_blk(80, 3, 1, vol_pct=20, delta_pct=8, move_pct=10), self.cfg) == "weak"
+    def test_one_sided_delta_that_price_ignores_is_absorption(self):
+        # buyers hit hard but price fell: the bids were absorbed by passive sellers
+        assert fs.classify_block(_blk(150, 80, -6, vol_pct=40, delta_pct=70, move_pct=40), self.cfg) == "absorption"
+        # one-sided delta, price barely moved
+        assert fs.classify_block(_blk(150, 40, 0.5, vol_pct=40, delta_pct=40, move_pct=8), self.cfg) == "absorption"
 
     def test_every_ready_block_gets_exactly_one_known_state(self):
         rng = random.Random(1)
@@ -144,6 +153,13 @@ class TestAnnotate:
         blocks = fs.annotate(fs.flow_blocks(bars, 60, 4), 60, cfg)
         line = fs.bar_line(bars, blocks, 60, cfg)
         assert len(line) == len(bars)
+        # at each block close the rolling lines equal the block's own percentages
+        for pt in line:
+            blk = next((b for b in blocks if b.ts + 3 * 3_600_000 == pt["ts"]), None)
+            if blk is not None and blk.vol_pct is not None and pt["vol_line"] is not None:
+                assert pt["vol_line"] == pytest.approx(blk.vol_pct)
+                assert pt["price_line"] == pytest.approx(blk.move_pct)
+                assert pt["line"] == pytest.approx(blk.delta_pct)
         by_ts = {b.ts: b.state for b in blocks}
         for pt in line:
             assert pt["state"] == by_ts[(pt["ts"] // (4 * 3_600_000)) * (4 * 3_600_000)]
@@ -153,4 +169,53 @@ def test_config_validation():
     with pytest.raises(ValueError):
         fs.FlowConfig(weak=60, big=55).validate()
     with pytest.raises(ValueError):
-        fs.FlowConfig(trend_consistency=5, block=4).validate()
+        fs.FlowConfig(block=0).validate()
+
+
+class TestStatesForBarsAndVeto:
+    @staticmethod
+    def _bars(n_blocks: int, seed: int = 2):
+        from types import SimpleNamespace
+        fb = fs.flow_bars(_series(n_blocks, seed=seed), 60)
+        return [SimpleNamespace(ts=b.ts, tf=60, open=b.open, high=b.high, low=b.low, close=b.close,
+                                volume=b.volume, taker_buy_volume=(b.volume + b.delta) / 2) for b in fb]
+
+    def test_a_bar_only_sees_blocks_closed_by_its_own_close(self):
+        bars = self._bars(220)
+        cfg = fs.FlowConfig()
+        full = fs.states_for_bars(bars, cfg)
+        for cut in (650, 653, 700):
+            assert fs.states_for_bars(bars[:cut], cfg) == full[:cut], \
+                "truncating the future changed a past bar's flow state"
+
+    def test_the_block_closing_bar_sees_its_own_block(self):
+        bars = self._bars(220)
+        cfg = fs.FlowConfig()
+        states = fs.states_for_bars(bars, cfg)
+        fbars = [fs.FlowBar(b.ts, b.open, b.high, b.low, b.close, b.volume,
+                            2 * b.taker_buy_volume - b.volume) for b in bars]
+        blocks = fs.annotate(fs.flow_blocks(fbars, 60, 4), 60, cfg)
+        k = 200
+        assert states[4 * k + 3] == blocks[k].state       # last bar of block k
+        assert states[4 * k + 2] == blocks[k - 1].state   # inside block k: previous block
+
+    def test_signal_veto_is_off_by_default_and_vetoes_when_on(self):
+        from engine import pipeline, signals as S
+        res = pipeline.run(days=40, seed=7, tf=60)
+        base = S.generate(res.bars, res.indicators, res.settings, S.SignalConfig(),
+                          warmup_index=res.warmup_index)
+        off = S.generate(res.bars, res.indicators, res.settings,
+                         S.SignalConfig(f_flow_state=False, flow_veto_states=fs.STATES),
+                         warmup_index=res.warmup_index)
+        assert [s.index for s in base.signals] == [s.index for s in off.signals]
+        on_all = S.generate(res.bars, res.indicators, res.settings,
+                            S.SignalConfig(f_flow_state=True, flow_veto_states=fs.STATES),
+                            warmup_index=res.warmup_index)
+        states = fs.states_for_bars(res.bars)
+        expected = [s.index for s in base.signals if states[s.index] == "unready"]
+        assert [s.index for s in on_all.signals] == expected
+
+    def test_unknown_veto_state_is_rejected(self):
+        from engine import signals as S
+        with pytest.raises(ValueError):
+            S.SignalConfig(f_flow_state=True, flow_veto_states=("white",)).validate()

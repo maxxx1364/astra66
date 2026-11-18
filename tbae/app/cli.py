@@ -163,11 +163,21 @@ def cmd_bars(args: argparse.Namespace) -> int:
     return 0
 
 
+def _flow_kw(args: argparse.Namespace) -> dict[str, Any]:
+    """Order-flow veto from ``--flow-veto`` (empty = off, the default)."""
+    raw = (getattr(args, "flow_veto", "") or "").strip()
+    if not raw:
+        return {}
+    return {"f_flow_state": True,
+            "flow_veto_states": tuple(x.strip() for x in raw.split(",") if x.strip())}
+
+
 def cmd_signals(args: argparse.Namespace) -> int:
     res = _build(args, cohort=True)
     _print_manifest(res)
     curves = res.stats.get("cohort_curves", {})
-    cfg = S.SignalConfig(min_edge_score=args.min_score, cooldown_bars=args.cooldown)
+    cfg = S.SignalConfig(min_edge_score=args.min_score, cooldown_bars=args.cooldown,
+                         **_flow_kw(args))
     ss = S.generate(res.bars, res.indicators, res.settings, cfg,
                     warmup_index=res.warmup_index, cohort_curves=curves)
     diag = S.diagnose(res.bars, ss, res.settings, warmup_index=res.warmup_index)
@@ -283,7 +293,7 @@ def cmd_backtest(args: argparse.Namespace) -> int:
     _print_manifest(res)
     curves = res.stats.get("cohort_curves", {})
     scfg = S.SignalConfig(min_edge_score=args.min_score, cooldown_bars=args.cooldown,
-                          entry_timing=args.entry_timing)
+                          entry_timing=args.entry_timing, **_flow_kw(args))
     rcfg = _risk_config(args, res)
     xcfg = ExitConfig(stop_mode=args.stop_mode,
                       stop_sigma_mult=args.stop_sigma)
@@ -411,7 +421,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
     _print_manifest(res)
     curves = res.stats.get("cohort_curves", {})
     scfg = S.SignalConfig(min_edge_score=args.min_score, cooldown_bars=args.cooldown,
-                          entry_timing=args.entry_timing)
+                          entry_timing=args.entry_timing, **_flow_kw(args))
     rcfg = _risk_config(args, res)
     xcfg = ExitConfig(stop_mode=args.stop_mode, stop_sigma_mult=args.stop_sigma)
 
@@ -470,7 +480,7 @@ def cmd_sweep(args: argparse.Namespace) -> int:
 
     for value in grid:
         scfg = S.SignalConfig(min_edge_score=args.min_score, cooldown_bars=args.cooldown,
-                              entry_timing=args.entry_timing)
+                              entry_timing=args.entry_timing, **_flow_kw(args))
         xcfg = ExitConfig(stop_mode=args.stop_mode, stop_sigma_mult=args.stop_sigma)
         if param == "min_edge_score":
             scfg.min_edge_score = value
@@ -561,7 +571,7 @@ def cmd_ablation(args: argparse.Namespace) -> int:
     def run_one(name: str, disabled: bool) -> dict[str, Any]:
         kw: dict[str, Any] = {"min_edge_score": args.min_score,
                               "cooldown_bars": args.cooldown,
-                              "entry_timing": args.entry_timing}
+                              "entry_timing": args.entry_timing, **_flow_kw(args)}
         if disabled and name:
             flag = {"trend": "f_trend", "volatility": "f_volatility",
                     "volume": "f_volume", "structure": "f_structure",
@@ -707,6 +717,9 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--min-score", type=float, default=0.45,
                    help="minimum edge score to accept a signal")
     g.add_argument("--cooldown", type=int, default=2, help="bars between entries")
+    g.add_argument("--flow-veto", default="",
+                   help="comma list of order-flow states that veto an entry, e.g. "
+                        "balanced,explosive (engine.flow_state; empty = off)")
     g.add_argument("--entry-timing", default="pullback_limit",
                    choices=("immediate", "pullback_limit"))
     g.add_argument("--stop-mode", default="sigma_structure_max",

@@ -153,8 +153,19 @@ class SignalConfig:
     #: regardless of how good each filter looks in isolation.
     hard_filters: tuple[str, ...] = (
         "direction", "trend", "volatility", "extension", "timing", "quality",
-        "cooldown", "daily_cap",
+        "cooldown", "daily_cap", "flowstate",
     )
+
+    # ---- order-flow state veto (engine.flow_state) ----
+    #: Skip a candidate when the last block closed by the signal bar is in one
+    #: of ``flow_veto_states``.  Off by default so every existing result is
+    #: unchanged.  The default list was chosen on the first half of the
+    #: 2023-11..2026-11 real-data sample: entries after a 'balanced' block
+    #: (heavy two-sided volume, no side winning) averaged -0.09R in-sample and
+    #: -0.07R out-of-sample; 'explosive' was negative in both halves on a small n.
+    f_flow_state: bool = False
+    flow_veto_states: tuple[str, ...] = ("balanced", "explosive")
+    flow_block: int = 4
 
     # ---- cadence guards ----
     cooldown_bars: int = 2
@@ -197,6 +208,12 @@ class SignalConfig:
             raise ValueError("cooldown_bars must be >= 0")
         if self.max_signals_per_day < 0:
             raise ValueError("max_signals_per_day must be >= 0 (0 disables the cap)")
+        from .flow_state import STATES as _FLOW_STATES
+        bad = [x for x in self.flow_veto_states if x not in _FLOW_STATES]
+        if bad:
+            raise ValueError(f"unknown flow_veto_states {bad}; known: {_FLOW_STATES}")
+        if self.flow_block < 1:
+            raise ValueError("flow_block must be >= 1")
         # ---- pullback limit-order geometry ----
         # A negative retrace would place the resting order *beyond* the signal
         # bar's extreme, where it can only fill by gapping — i.e. it would fill
@@ -442,8 +459,12 @@ def generate(
     day_counts: dict[int, int] = {}
     # funnel bookkeeping: ordered list of hard gates
     order = ["universe", "category", "direction", "trend", "volatility", "volume",
-             "flow", "structure", "momentum", "extension", "timing", "quality",
+             "flow", "structure", "momentum", "extension", "timing", "flowstate", "quality",
              "cooldown"]
+    flow_states: list[str] | None = None
+    if cfg.f_flow_state:
+        from .flow_state import FlowConfig as _FlowConfig, states_for_bars
+        flow_states = states_for_bars(bars, _FlowConfig(block=cfg.flow_block))
     entered = {k: 0 for k in order}
     passed = {k: 0 for k in order}
 
@@ -486,6 +507,14 @@ def generate(
             fr = sig.filters.get(key)
             if fr is None or fr.passed:
                 passed[key] += 1
+
+        # ---------- order-flow state veto ----------
+        if flow_states is not None:
+            entered["flowstate"] += 1
+            if flow_states[i] in cfg.flow_veto_states:
+                _fail(sig, "flowstate", cfg)
+            else:
+                passed["flowstate"] += 1
 
         # ---------- quality / cooldown ----------
         entered["quality"] += 1
