@@ -1,0 +1,84 @@
+{
+ "data_through": "2026-11-20",
+ "config": "tf 60m, taker 2bp, maker 1bp, slippage 2bp, sigma stop 4.4, min_edge_score 0.45",
+ "base": {
+  "BTCUSDT": {
+   "trades": 408,
+   "expectancy_r": -0.06230086032729094,
+   "return_pct": -17.206236662318755,
+   "max_dd_pct": 18.34584687643449,
+   "gross": -7660.841450993606,
+   "friction": 9545.395211325067,
+   "net": -17206.23666231863,
+   "verdict": "exit_logic_dominates_entry_is_decoration"
+  },
+  "ETHUSDT": {
+   "trades": 551,
+   "expectancy_r": -0.05109092797194458,
+   "return_pct": -18.120427615975625,
+   "max_dd_pct": 18.390435420272595,
+   "gross": -3825.5307193569543,
+   "friction": 14294.896896618562,
+   "net": -18120.427615975517,
+   "verdict": "entry_selection_has_edge"
+  },
+  "SOLUSDT": {
+   "trades": 462,
+   "expectancy_r": 0.04628993264335779,
+   "return_pct": 5.045071633293832,
+   "max_dd_pct": 7.301012097728986,
+   "gross": 19524.504965243454,
+   "friction": 14479.433331949382,
+   "net": 5045.07163329399,
+   "verdict": "entry_selection_has_edge"
+  },
+  "XRPUSDT": {
+   "trades": 537,
+   "expectancy_r": 0.021388176664646676,
+   "return_pct": 0.15860623146075523,
+   "max_dd_pct": 15.778403431432228,
+   "gross": 17367.443637232926,
+   "friction": 17208.837405771836,
+   "net": 158.60623146110794,
+   "verdict": "entry_selection_has_edge"
+  }
+ },
+ "veto": {
+  "BTCUSDT": {
+   "trades": 456,
+   "expectancy_r": -0.037625642583949404,
+   "return_pct": -12.513933695223969,
+   "max_dd_pct": 14.567925889496394,
+   "gross": -1573.21007636902,
+   "friction": 10940.72361885484,
+   "net": -12513.933695223983
+  },
+  "ETHUSDT": {
+   "trades": 428,
+   "expectancy_r": -0.0008975030079940129,
+   "return_pct": -0.23688074926775882,
+   "max_dd_pct": 7.5915440462413555,
+   "gross": 11695.270737599196,
+   "friction": 11932.151486867011,
+   "net": -236.88074926778407
+  },
+  "SOLUSDT": {
+   "trades": 350,
+   "expectancy_r": 0.07860425393688508,
+   "return_pct": 10.269926069216613,
+   "max_dd_pct": 4.738240585080686,
+   "gross": 20724.0762958956,
+   "friction": 10454.150226678925,
+   "net": 10269.926069216684
+  },
+  "XRPUSDT": {
+   "trades": 412,
+   "expectancy_r": 0.03136504454371562,
+   "return_pct": 1.9414994200420623,
+   "max_dd_pct": 12.476586787182692,
+   "gross": 15266.88681488172,
+   "friction": 13325.387394839701,
+   "net": 1941.4994200420153
+  }
+ }
+}

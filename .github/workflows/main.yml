@@ -62,6 +62,9 @@ on:
       min_score:
         description: "min_edge_score for compare/ablation runs"
         default: "0.45"
+      flow_veto:
+        description: "Order-flow states that veto entries, e.g. balanced,explosive (empty = off)"
+        default: ""
 
 concurrency:
   group: backtest-${{ github.ref }}
@@ -103,6 +106,8 @@ env:
   STOP_MODE: ${{ github.event.inputs.stop_mode || 'sigma' }}
   STOP_SIGMA: ${{ github.event.inputs.stop_sigma || '4.4' }}
   MIN_SCORE: ${{ github.event.inputs.min_score || '0.45' }}
+  # Off unless a dispatch names states, so the scheduled study stays comparable.
+  FLOW_VETO: ${{ github.event.inputs.flow_veto || '' }}
 
 jobs:
   # ---------------------------------------------------------------- tests ---
@@ -392,7 +397,7 @@ jobs:
             COST_ARGS="--commission-bps $COMMISSION_BPS --maker-bps $MAKER_BPS \
               --slippage-bps $SLIPPAGE_BPS \
               --stop-mode $STOP_MODE --stop-sigma $STOP_SIGMA \
-              --min-score $MIN_SCORE"
+              --min-score $MIN_SCORE ${FLOW_VETO:+--flow-veto $FLOW_VETO}"
             echo "=== $SYM: compare vs controls ==="
             python -m app.cli compare --feed "csv:$CSV" --tf "$TF" $COST_ARGS \
               --json "../reports/real_compare_${SYM}.json" || status=1
