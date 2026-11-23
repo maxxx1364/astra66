@@ -136,7 +136,8 @@ class LiveConfig:
     def load(cls, path: str | None) -> "LiveConfig":
         if not path:
             return cls()
-        with open(path, encoding="utf-8") as fh:
+        # utf-8-sig: Windows PowerShell 5 writes a BOM with "Out-File -Encoding utf8"
+        with open(path, encoding="utf-8-sig") as fh:
             return cls.from_dict(json.load(fh))
 
     def validate(self) -> "LiveConfig":

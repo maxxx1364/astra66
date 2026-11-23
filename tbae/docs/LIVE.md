@@ -57,7 +57,7 @@ python3 -m live scan-once --config live.json     # یک دور کامل و چا�
 python3 -m live run --config live.json --dashboard   # داشبورد روی http://127.0.0.1:8100
 ```
 
-برای اجرای دائمی، `deploy/tbae-live.service` را ببین (systemd با `Restart=always`).
+برای اجرای دائمی روی لینوکس `deploy/tbae-live.service` (systemd) و روی ویندوز [`WINDOWS.md`](WINDOWS.md) را ببین.
 
 **کلیدها** فقط در متغیر محیطی قرار می‌گیرند: `TABDEAL_API_KEY` و `TABDEAL_API_SECRET`.
 برای اسکن و معامله‌ی کاغذی **هیچ کلیدی لازم نیست**. اگر کلیدی دسترسی برداشت داشته
