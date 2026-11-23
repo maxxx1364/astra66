@@ -1,0 +1,24 @@
+# systemd unit for the live runner.  Install:
+#   sudo cp deploy/tbae-live.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now tbae-live
+#   journalctl -u tbae-live -f
+#
+# Secrets go in /etc/tbae/live.env (chmod 600, owned by root), never in git:
+#   TABDEAL_API_KEY=...
+#   TABDEAL_API_SECRET=...
+#   # TBAE_LIVE_TRADING=yes   <- only after paper trading has been reviewed
+[Unit]
+Description=TBAE live spot scanner
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=tbae
+WorkingDirectory=/opt/astra66/tbae
+EnvironmentFile=-/etc/tbae/live.env
+ExecStart=/opt/astra66/tbae/.venv/bin/python -m live run --config /etc/tbae/live.json --dashboard --host 127.0.0.1 --port 8100
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

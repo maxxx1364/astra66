@@ -22,3 +22,11 @@ httpx>=0.27,<1.0          # FastAPI's TestClient transport
 
 # --- optional: development ----------------------------------------------------
 # ruff>=0.4               # lint (the repo has no formatter config yet)
+
+# --- live spot system (live/) -------------------------------------------------
+# The live layer (scanner, candles, DNA analysis) uses pandas/NumPy by design;
+# engine/ stays pure standard library.
+pandas>=2.0,<4.0
+numpy>=1.26,<3.0
+websockets>=12.0          # Tabdeal order-book stream
+# ccxt>=4.3               # optional: other exchanges + candle history backfill
