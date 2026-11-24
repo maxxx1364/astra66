@@ -38,6 +38,8 @@ def main(argv: list[str] | None = None) -> int:
             sp.add_argument("--host", default="127.0.0.1")
             sp.add_argument("--port", type=int, default=8100)
             sp.add_argument("--no-websocket", action="store_true")
+    w = sub.add_parser("wakeup", help="daily scan for coins waking up (Binance public data)")
+    w.add_argument("--json", action="store_true")
     d = sub.add_parser("dashboard")
     d.add_argument("--db", default="data/live.sqlite3")
     d.add_argument("--host", default="127.0.0.1")
@@ -49,6 +51,20 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "default-config":
         json.dump(LiveConfig().to_dict(), sys.stdout, indent=2, ensure_ascii=False)
         print()
+        return 0
+    if a.cmd == "wakeup":
+        from .wakeup import BinanceDaily, scan_today
+        rows = scan_today(BinanceDaily())
+        if a.json:
+            json.dump(rows, sys.stdout, indent=2, ensure_ascii=False)
+            print()
+            return 0
+        if not rows:
+            print("no wake-up signals on the last closed day")
+        for r in rows:
+            print(f"{r['symbol']:<14} score={r['score']:<6} rvol={r['rvol']:<6} "
+                  f"day={r['day_move']:+.2%} taker_buy={r['taker_buy']:.2f} "
+                  f"vs_btc_20d={r['rel_20d']:+.2%}  [{', '.join(r['confirm'])}]")
         return 0
     if a.cmd == "dashboard":
         from .dashboard import create_app
