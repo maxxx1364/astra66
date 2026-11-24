@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>داشبورد اسپات TBAE</title>
+<!-- vendored (Apache-2.0, see lightweight-charts.LICENSE): no CDN dependency, which
+     matters on servers with filtered international access -->
+<script src="/static/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root { --bg:#0f1216; --panel:#171b21; --line:#262c35; --fg:#e6e9ee; --mute:#8b95a5;
+          --up:#22a06b; --down:#e2483d; --warn:#d99a1e; --accent:#4c8dff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:14px/1.5 Tahoma, "Vazirmatn", system-ui, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:16px; align-items:center;
+           padding:12px 16px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0; }
+  .pill { padding:2px 10px; border-radius:99px; background:var(--panel); color:var(--mute); }
+  .pill.live { background:var(--down); color:#fff; }
+  main { display:grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); gap:16px; padding:16px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; min-width:0; }
+  section h2 { font-size:14px; margin:0 0 8px; color:var(--mute); font-weight:normal; }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th { color:var(--mute); font-weight:normal; }
+  tr.sel { background:#1f2630; } tbody tr { cursor:pointer; }
+  .up { color:var(--up); } .down { color:var(--down); } .warn { color:var(--warn); } .mute { color:var(--mute); }
+  .bar { height:6px; background:var(--line); border-radius:3px; min-width:60px; }
+  .bar > i { display:block; height:100%; border-radius:3px; background:var(--accent); }
+  #chart { height:340px; }
+  .kv { display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap:6px 12px; margin-top:10px; }
+  .kv div span { color:var(--mute); display:block; font-size:12px; }
+  .notes { color:var(--warn); font-size:12px; margin-top:6px; }
+  .full { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>داشبورد اسپات TBAE</h1>
+  <span class="pill" id="mode">—</span>
+  <span class="pill" id="fees">کارمزد —</span>
+  <span class="pill" id="funnel">قیف —</span>
+  <span class="pill" id="perf">عملکرد —</span>
+  <span class="pill mute" id="updated"></span>
+</header>
+<main>
+  <section>
+    <h2>فرصت‌های رتبه‌بندی‌شده (فقط خرید؛ امتیاز صفر = سود مورد انتظار کمتر از کارمزد)</h2>
+    <div class="scroll"><table id="opps"><thead><tr>
+      <th>#</th><th>نماد</th><th>امتیاز</th><th>رژیم</th><th>حرکت هدف</th><th>هزینه</th>
+      <th>لبه‌ی خالص</th><th>سیگنال موتور</th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <section>
+    <h2 id="chart-title">نمودار</h2>
+    <div id="chart"></div>
+    <div class="kv" id="detail"></div>
+    <div class="notes" id="notes"></div>
+  </section>
+  <section class="full">
+    <h2>معاملات (باز و بسته)</h2>
+    <div class="scroll"><table id="pos"><thead><tr>
+      <th>نماد</th><th>حالت</th><th>وضعیت</th><th>ورود</th><th>حد ضرر</th><th>هدف</th>
+      <th>خروج</th><th>دلیل</th><th>سود/زیان</th><th>R</th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <section class="full">
+    <h2>رویدادها</h2>
+    <div class="scroll"><table id="events"><tbody></tbody></table></div>
+  </section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const fmt = (x, d = 2) => (x === null || x === undefined || !isFinite(x)) ? "—"
+  : Number(x).toLocaleString("en-US", { maximumFractionDigits: d });
+const fmtPx = (x) => (x === null || x === undefined) ? "—"
+  : Number(x).toLocaleString("en-US", { maximumSignificantDigits: 8 });
+const time = (ms) => ms ? new Date(ms).toLocaleTimeString("fa-IR") : "—";
+const REG = { trend: "روند", range: "رنج", mean_reverting: "برگشتی", chaotic: "پرنوسان", dead: "مرده" };
+let selected = null, chart = null, series = null, opps = [];
+
+async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error(url); return r.json(); }
+
+function initChart() {
+  if (!window.LightweightCharts) return;
+  chart = LightweightCharts.createChart($("#chart"), {
+    layout: { background: { color: "transparent" }, textColor: "#8b95a5" },
+    grid: { vertLines: { color: "#20252d" }, horzLines: { color: "#20252d" } },
+    rightPriceScale: { borderColor: "#262c35" }, timeScale: { borderColor: "#262c35", timeVisible: true },
+    autoSize: true,
+  });
+  series = chart.addCandlestickSeries({ upColor: "#22a06b", downColor: "#e2483d",
+    borderVisible: false, wickUpColor: "#22a06b", wickDownColor: "#e2483d" });
+}
+
+async function loadChart(sym) {
+  selected = sym;
+  $("#chart-title").textContent = `نمودار ${sym} — ۱۵ دقیقه`;
+  const o = opps.find((x) => x.symbol === sym) || {};
+  const f = o.features || {};
+  $("#detail").innerHTML = [
+    ["قیمت", fmtPx(o.price)], ["حد ضرر", fmtPx(o.stop)], ["هدف", fmtPx(o.target)],
+    ["ATR٪", fmt(f.atr_pct, 3)], ["کارایی", fmt(f.efficiency, 2)], ["R²", fmt(f.r2, 2)],
+    ["RSI", fmt(f.rsi, 0)], ["سهم خرید تیکر", fmt(f.taker_buy_share, 2)],
+    ["نسبت واریانس", fmt(f.variance_ratio, 2)], ["هزینه به R", fmt(o.cost_r, 2)],
+  ].map(([k, v]) => `<div><span>${k}</span>${v}</div>`).join("");
+  $("#notes").textContent = (o.notes || []).join(" · ");
+  document.querySelectorAll("#opps tbody tr").forEach((tr) =>
+    tr.classList.toggle("sel", tr.dataset.sym === sym));
+  if (!series) return;
+  try {
+    const d = await j(`/api/live/candles/${sym}?tf=15&limit=300`);
+    series.setData(d.candles);
+    const lines = [];
+    if (o.stop) lines.push({ price: o.stop, color: "#e2483d", title: "حد ضرر" });
+    if (o.target) lines.push({ price: o.target, color: "#22a06b", title: "هدف" });
+    (series._lines || []).forEach((l) => series.removePriceLine(l));
+    series._lines = lines.map((l) => series.createPriceLine({ ...l, lineWidth: 1, lineStyle: 2 }));
+    chart.timeScale().fitContent();
+  } catch (e) { series.setData([]); }
+}
+
+function renderOpps() {
+  $("#opps tbody").innerHTML = opps.map((o) => {
+    const sig = o.engine_signal ? `${o.engine_signal.grade} (${fmt(o.engine_signal.score, 2)})`
+      : (o.dna && o.dna.engine && o.dna.engine.ready ? "—" : '<span class="mute">گرم‌شدن</span>');
+    const cls = o.score > 0 ? "" : "mute";
+    return `<tr data-sym="${o.symbol}" class="${cls}">
+      <td>${o.rank}</td><td>${o.symbol}</td>
+      <td><div class="bar"><i style="width:${Math.round((o.score || 0) * 100)}%"></i></div>${fmt(o.score, 2)}</td>
+      <td>${REG[o.regime] || "—"}</td>
+      <td>${fmt(o.expected_move_bps, 0)}bp</td><td>${fmt(o.cost_bps, 0)}bp</td>
+      <td class="${o.score > 0 ? ((o.net_edge_bps || 0) > 0 ? "up" : "down") : "mute"}"
+          title="${(o.notes || []).join(" · ")}">${fmt(o.net_edge_bps, 0)}bp</td>
+      <td>${sig}</td></tr>`;
+  }).join("");
+  document.querySelectorAll("#opps tbody tr").forEach((tr) =>
+    tr.addEventListener("click", () => loadChart(tr.dataset.sym)));
+}
+
+async function refresh() {
+  try {
+    const [st, o, pos, ev] = await Promise.all([j("/api/live/status"), j("/api/live/opportunities"),
+      j("/api/live/positions"), j("/api/live/events?limit=30")]);
+    opps = o;
+    if (st.mode) {
+      $("#mode").textContent = st.mode === "live" ? "معامله‌ی واقعی" : "معامله‌ی کاغذی";
+      $("#mode").classList.toggle("live", st.mode === "live");
+    }
+    if (st.fees) $("#fees").textContent = `کارمزد میکر ${st.fees.maker_bps}bp · تیکر ${st.fees.taker_bps}bp`;
+    if (st.funnel) $("#funnel").textContent =
+      `نمادها ${st.funnel.total || 0} · عبور از فیلتر ${st.funnel.passed || 0} · کاندید ${(st.candidates || []).length}`;
+    const p = st.performance || {};
+    $("#perf").textContent = p.trades ? `${p.trades} معامله · برد ${fmt(p.win_rate * 100, 0)}٪ · میانگین ${fmt(p.avg_r, 2)}R`
+      : "هنوز معامله‌ای بسته نشده";
+    $("#updated").textContent = "به‌روزرسانی " + new Date().toLocaleTimeString("fa-IR");
+    renderOpps();
+    $("#pos tbody").innerHTML = pos.map((x) => `<tr>
+      <td>${x.symbol}</td><td>${x.mode === "live" ? "واقعی" : "کاغذی"}</td><td>${x.status}</td>
+      <td>${fmtPx(x.entry_price)}</td><td>${fmtPx(x.stop)}</td><td>${fmtPx(x.target)}</td>
+      <td>${fmtPx(x.exit_price)}</td><td>${x.exit_reason || ""}</td>
+      <td class="${(x.pnl_quote || 0) >= 0 ? "up" : "down"}">${fmt(x.pnl_quote, 4)}</td>
+      <td>${fmt(x.pnl_r, 2)}</td></tr>`).join("");
+    $("#events tbody").innerHTML = ev.map((e) => `<tr class="${e.level === "error" ? "down" : e.level === "warn" ? "warn" : ""}">
+      <td>${time(e.ts)}</td><td>${e.kind}</td><td>${e.symbol || ""}</td><td>${e.message}</td></tr>`).join("");
+    if (!selected && opps.length) loadChart(opps[0].symbol);
+  } catch (e) { $("#updated").textContent = "اتصال به سرور برقرار نیست"; }
+}
+
+initChart();
+refresh();
+setInterval(refresh, 10000);
+setInterval(() => selected && loadChart(selected), 60000);
+</script>
+</body>
+</html>
